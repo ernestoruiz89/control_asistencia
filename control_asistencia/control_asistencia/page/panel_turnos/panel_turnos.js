@@ -15,6 +15,7 @@ const STATUS_LABELS = {
 };
 
 let currentWeekStart = getMonday(new Date());
+let weeklyData = [];
 
 frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({
@@ -30,11 +31,12 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                 <span class="week-label" id="week-label"></span>
                 <button class="btn btn-default btn-sm" id="next-week">Siguiente ▶</button>
                 <div style="flex:1"></div>
+                <input type="text" id="employee-filter" class="form-control input-sm" placeholder="Buscar empleado..." style="max-width: 200px;">
                 <button class="btn btn-primary btn-sm" id="btn-create-shift">+ Crear Turno</button>
                 <button class="btn btn-success btn-sm" id="btn-assign-shift">Asignar Turno</button>
             </div>
             <div class="shift-legend" id="shift-legend"></div>
-            <div id="grid-wrapper" style="overflow-x:auto;"></div>
+            <div id="grid-wrapper" style="max-height: 70vh; overflow: auto; border: 1px solid var(--border-color, #d1d8dd);"></div>
         </div>
     `);
 
@@ -78,6 +80,9 @@ function renderLegend() {
 // ── Events ──────────────────────────────────────────────────────────────────
 
 function bindEvents() {
+    document.getElementById('employee-filter').addEventListener('input', () => {
+        applyFilterAndRender();
+    });
     document.getElementById('prev-week').addEventListener('click', () => {
         currentWeekStart.setDate(currentWeekStart.getDate() - 7);
         loadWeek();
@@ -103,9 +108,24 @@ function loadWeek() {
     frappe.call({
         method: `${API}.get_weekly_panel_data`,
         args: { week_start: ws },
-        callback: ({ message }) => renderGrid(message || []),
+        callback: ({ message }) => {
+            weeklyData = message || [];
+            applyFilterAndRender();
+        },
         error: () => frappe.msgprint(__('Error al cargar los datos del panel.')),
     });
+}
+
+function applyFilterAndRender() {
+    const filterText = (document.getElementById('employee-filter').value || '').toLowerCase();
+    let data = weeklyData;
+    if (filterText) {
+        data = weeklyData.filter(emp => 
+            emp.employee_name.toLowerCase().includes(filterText) || 
+            emp.employee.toLowerCase().includes(filterText)
+        );
+    }
+    renderGrid(data);
 }
 
 function renderGrid(data) {

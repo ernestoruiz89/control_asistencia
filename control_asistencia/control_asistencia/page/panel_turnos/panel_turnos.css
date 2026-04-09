@@ -57,14 +57,25 @@
     font-weight: 600;
     font-size: 12px;
     white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 .shift-grid th.col-employee {
     width: 200px;
     text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    background: var(--subtle-fg, #f7f7f7);
 }
 .shift-grid td.cell-employee {
     text-align: left;
     font-weight: 500;
+    position: sticky;
+    left: 0;
+    z-index: 9;
+    background: #ffffff;
 }
 
 /* ── Status colors ── */
