@@ -83,7 +83,7 @@ def _accumulate(records, reference_now=None, strip_tz=False):
     last_action = None
 
     for rec in records:
-        action = rec["custom_registration_type"].lower()
+        action = (rec.get("custom_registration_type") or "").lower()
         t = rec["time"]
         if strip_tz:
             t = t.replace(tzinfo=None)
@@ -247,7 +247,7 @@ def get_total_break_time(employee):
     total_ms = 0
     brk_start = None
     for rec in breaks:
-        action = rec["custom_registration_type"].lower()
+        action = (rec.get("custom_registration_type") or "").lower()
         if is_break_start(action):
             brk_start = rec["time"]
         elif is_break_end(action) and brk_start:
