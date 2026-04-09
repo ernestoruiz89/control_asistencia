@@ -115,7 +115,8 @@ def _accumulate(records, reference_now=None, strip_tz=False):
     # If the employee is still working / on break right now
     if reference_now is not None and working:
         now = reference_now
-        if strip_tz:
+        # DB timestamps are naive; strip tz from now to avoid mixed subtraction
+        if strip_tz or (last_time and last_time.tzinfo is None):
             now = now.replace(tzinfo=None)
         if break_start:
             total_break += now - break_start
