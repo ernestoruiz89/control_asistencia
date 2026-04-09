@@ -184,16 +184,20 @@ def get_weekly_panel_data(week_start):
             "to_date": [">=", str(week_start)],
             "status": "Approved",
         },
-        fields=["employee", "from_date", "to_date", "leave_type"],
+        fields=["employee", "from_date", "to_date", "leave_type", "half_day", "half_day_date"],
     )
 
-    leave_map = {}  # emp -> date_str -> leave_type
+    leave_map = {}  # emp -> date_str -> dict
     for lv in leaves:
         eid = lv.employee
         d = max(lv.from_date, week_start)
         end = min(lv.to_date, week_end)
         while d <= end:
-            leave_map.setdefault(eid, {})[str(d)] = lv.leave_type
+            is_half = bool(lv.half_day) and str(lv.half_day_date) == str(d)
+            leave_map.setdefault(eid, {})[str(d)] = {
+                "type": lv.leave_type,
+                "is_half": is_half
+            }
             d += timedelta(days=1)
 
     # ── 4. Shift Type details ──
@@ -213,17 +217,27 @@ def get_weekly_panel_data(week_start):
             d = week_start + timedelta(days=i)
             ds = str(d)
             shift_name = info["shifts"].get(ds)
-            leave_type = leave_map.get(eid, {}).get(ds)
+            leave_info = leave_map.get(eid, {}).get(ds)
             day_checkins = checkin_map.get(eid, {}).get(ds, [])
 
             status = "not_scheduled"
             shift_label = ""
+            detail = ""
 
-            if leave_type:
-                status = "leave"
-                shift_label = leave_type
+            st = shift_types.get(shift_name, {}) if shift_name else None
+
+            if leave_info:
+                if leave_info["is_half"] and shift_name:
+                    status = "leave"
+                    if st and st.get("start_time") is not None and st.get("end_time") is not None:
+                        shift_label = f"{_fmt_hour_12(st['start_time'])} - {_fmt_hour_12(st['end_time'])}"
+                    else:
+                        shift_label = shift_name
+                    detail = leave_info["type"]
+                else:
+                    status = "leave"
+                    shift_label = leave_info["type"]
             elif shift_name:
-                st = shift_types.get(shift_name, {})
                 if st and st.get("start_time") is not None and st.get("end_time") is not None:
                     shift_label = f"{_fmt_hour_12(st['start_time'])} - {_fmt_hour_12(st['end_time'])}"
                 else:
@@ -286,6 +300,7 @@ def get_weekly_panel_data(week_start):
                 "date": ds,
                 "shift": shift_label,
                 "status": status,
+                "detail": detail
             })
 
         # Always include active employees

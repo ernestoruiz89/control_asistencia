@@ -146,7 +146,7 @@ function renderGrid(data) {
         for (const day of emp.days) {
             const cls = 'cell-' + day.status;
             const label = day.shift || '—';
-            const detail = STATUS_LABELS[day.status] || '';
+            const detail = day.detail || STATUS_LABELS[day.status] || '';
             cells += `<td class="${cls}">
                 <span class="shift-name">${label}</span>
                 <span class="shift-detail">${detail}</span>
