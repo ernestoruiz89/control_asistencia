@@ -347,7 +347,7 @@ def get_weekly_panel_data(week_start):
 
 @frappe.whitelist()
 def get_day_details(employee, date):
-    """Return shift assignment and leave details for a specific employee+date."""
+    """Return shift assignment, leave, and checkin details for a specific employee+date."""
     shifts = frappe.get_all(
         "Shift Assignment",
         filters={
@@ -369,7 +369,24 @@ def get_day_details(employee, date):
         fields=["name", "leave_type", "from_date", "to_date",
                 "half_day", "half_day_date", "description", "status"],
     )
-    return {"shift_assignments": shifts, "leave_applications": leaves}
+    checkins = frappe.get_all(
+        "Employee Checkin",
+        filters={
+            "employee": employee,
+            "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]],
+        },
+        fields=["name", "time", "custom_registration_type"],
+        order_by="time ASC",
+    )
+    # Format times as strings for JSON serialization
+    for c in checkins:
+        c["time"] = str(c["time"])
+
+    return {
+        "shift_assignments": shifts,
+        "leave_applications": leaves,
+        "checkins": checkins,
+    }
 
 
 @frappe.whitelist()

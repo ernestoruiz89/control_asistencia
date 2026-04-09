@@ -262,6 +262,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
     });
 
     // ── Build info HTML ──
+    const checkins = details.checkins || [];
     let infoHtml = '<div style="margin-bottom:4px;">';
     if (hasShift) {
         infoHtml += `<div class="alert alert-info" style="padding:8px 12px;margin-bottom:6px;font-size:13px;">
@@ -280,6 +281,44 @@ function _buildDayDialog(employee, employeeName, date, details) {
     if (!hasShift && !hasLeave) {
         infoHtml += `<div class="text-muted" style="margin-bottom:6px;font-size:13px;">${__('Sin turno ni permiso asignado.')}</div>`;
     }
+
+    // ── Checkin info ──
+    if (checkins.length) {
+        const fmtTime = (t) => {
+            const dt = new Date(t);
+            return dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', hour12: true });
+        };
+        const typeLabel = (t) => {
+            const v = (t || '').toLowerCase();
+            if (v === 'clock-in') return '🟢 Entrada';
+            if (v === 'clock-out') return '🔴 Salida';
+            return t || '—';
+        };
+
+        const firstIn = checkins.find(c => (c.custom_registration_type || '').toLowerCase() === 'clock-in');
+        const lastOut = [...checkins].reverse().find(c => (c.custom_registration_type || '').toLowerCase() === 'clock-out');
+
+        let checkinHtml = '<div class="alert alert-success" style="padding:8px 12px;margin-bottom:6px;font-size:13px;">';
+        checkinHtml += `<strong>${__('Registros de asistencia')}</strong><br>`;
+        checkinHtml += `<span>${__('Primer entrada:')} <strong>${firstIn ? fmtTime(firstIn.time) : '—'}</strong></span>`;
+        checkinHtml += ` &nbsp;|&nbsp; `;
+        checkinHtml += `<span>${__('Última salida:')} <strong>${lastOut ? fmtTime(lastOut.time) : '—'}</strong></span>`;
+
+        // Full list
+        checkinHtml += '<table style="width:100%;margin-top:6px;font-size:12px;border-collapse:collapse;">';
+        checkinHtml += `<tr style="border-bottom:1px solid rgba(0,0,0,0.1);"><th style="text-align:left;padding:2px 4px;">${__('Hora')}</th><th style="text-align:left;padding:2px 4px;">${__('Tipo')}</th></tr>`;
+        for (const c of checkins) {
+            checkinHtml += `<tr style="border-bottom:1px solid rgba(0,0,0,0.05);">
+                <td style="padding:2px 4px;">${fmtTime(c.time)}</td>
+                <td style="padding:2px 4px;">${typeLabel(c.custom_registration_type)}</td>
+            </tr>`;
+        }
+        checkinHtml += '</table></div>';
+        infoHtml += checkinHtml;
+    } else {
+        infoHtml += `<div class="text-muted" style="margin-bottom:6px;font-size:12px;">${__('Sin registros de asistencia.')}</div>`;
+    }
+
     infoHtml += '</div>';
 
     const d = new frappe.ui.Dialog({
