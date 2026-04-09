@@ -41,6 +41,7 @@
 /* ── Grid / Table ── */
 .shift-grid {
     width: 100%;
+    min-width: 900px;
     border-collapse: collapse;
     table-layout: fixed;
     font-size: 13px;
@@ -58,15 +59,12 @@
     white-space: nowrap;
 }
 .shift-grid th.col-employee {
-    width: 160px;
+    width: 200px;
     text-align: left;
 }
 .shift-grid td.cell-employee {
     text-align: left;
     font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 /* ── Status colors ── */

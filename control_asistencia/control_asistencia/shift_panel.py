@@ -266,13 +266,11 @@ def get_weekly_panel_data(week_start):
                 "status": status,
             })
 
-        # Only include employees that have at least one shift assignment
-        has_shift = any(day["shift"] for day in days)
-        if has_shift or any(checkin_map.get(eid, {}).get(str(week_start + timedelta(days=i)), []) for i in range(7)):
-            result.append({
-                "employee": eid,
-                "employee_name": info["employee_name"],
-                "days": days,
-            })
+        # Always include active employees
+        result.append({
+            "employee": eid,
+            "employee_name": info["employee_name"],
+            "days": days,
+        })
 
     return result
