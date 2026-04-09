@@ -121,7 +121,7 @@ function register_checkin(btnId) {
         .then(requireGeo => {
             if (!requireGeo) {
                 // Geolocalización no requerida — registrar sin coordenadas
-                submit_checkin(logType, label, null, null, tz);
+                submit_checkin(logType, label, 0.0, 0.0, tz);
                 return;
             }
             if (navigator.geolocation) {
