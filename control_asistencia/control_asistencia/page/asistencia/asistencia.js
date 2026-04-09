@@ -155,7 +155,13 @@ function submit_checkin(logType, customLabel, lat, lon, tz) {
 
 // ---------- consulta de tiempo laborado --------------------------------------
 function consult_worked_time() {
-    const clientTime = new Date().toISOString().slice(0, 19); // strip TZ
+    const d = new Date();
+    const clientTime = d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0') + 'T' +
+        String(d.getHours()).padStart(2,'0') + ':' +
+        String(d.getMinutes()).padStart(2,'0') + ':' +
+        String(d.getSeconds()).padStart(2,'0');
     frappe.call({
         method: 'control_asistencia.control_asistencia.functions.get_current_worked_hours',
         args:   { client_time: clientTime },
