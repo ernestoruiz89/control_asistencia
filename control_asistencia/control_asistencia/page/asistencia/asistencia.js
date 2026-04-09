@@ -76,7 +76,7 @@ function refresh_button_state() {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     frappe.call({
-        method: 'finde.functions.get_current_status',
+        method: 'control_asistencia.control_asistencia.functions.get_current_status',
         args:   { client_timezone: tz },
         callback: ({ message }) => update_buttons_for(message ? message.last_action : null),
         error: () => frappe.msgprint(__('No se pudo obtener el estado actual del servidor.'))
@@ -140,7 +140,7 @@ function register_checkin(btnId) {
 }
 function submit_checkin(logType, customLabel, lat, lon, tz) {
     frappe.call({
-        method: 'finde.functions.register_checkin',
+        method: 'control_asistencia.control_asistencia.functions.register_checkin',
         args:   { log_type: logType, custom_registration_type: customLabel, latitude: lat, longitude: lon, client_timezone: tz },
         callback: ({ message }) => {
             frappe.msgprint(message || __('Registro guardado.'));
