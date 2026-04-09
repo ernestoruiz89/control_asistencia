@@ -236,7 +236,8 @@ def get_weekly_panel_data(week_start):
                     detail = leave_info["type"]
                 else:
                     status = "leave"
-                    shift_label = leave_info["type"]
+                    shift_label = "Vacaciones/Permiso"
+                    detail = leave_info["type"]
             elif shift_name:
                 if st and st.get("start_time") is not None and st.get("end_time") is not None:
                     shift_label = f"{_fmt_hour_12(st['start_time'])} - {_fmt_hour_12(st['end_time'])}"
