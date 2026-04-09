@@ -1,0 +1,278 @@
+import frappe
+from frappe import _
+from datetime import datetime, timedelta, time
+
+
+def _fmt_hour(t):
+    """Format a time object as '8a', '5p', '12p', etc."""
+    if isinstance(t, str):
+        parts = t.split(":")
+        h, m = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+    elif isinstance(t, timedelta):
+        total_secs = int(t.total_seconds())
+        h = total_secs // 3600
+        m = (total_secs % 3600) // 60
+    else:
+        h, m = t.hour, t.minute
+
+    suffix = "a" if h < 12 else "p"
+    display_h = h if h <= 12 else h - 12
+    if display_h == 0:
+        display_h = 12
+    if m:
+        return f"{display_h}:{m:02d}{suffix}"
+    return f"{display_h}{suffix}"
+
+
+@frappe.whitelist()
+def get_shift_types():
+    """Return all Shift Type records."""
+    return frappe.get_all(
+        "Shift Type",
+        fields=["name", "start_time", "end_time"],
+        order_by="start_time ASC",
+    )
+
+
+@frappe.whitelist()
+def create_shift_type(start_time, end_time):
+    """Create a new Shift Type with auto-generated name like '8a-5p'."""
+    name = f"{_fmt_hour(start_time)}-{_fmt_hour(end_time)}"
+
+    if frappe.db.exists("Shift Type", name):
+        frappe.throw(_("El turno '{0}' ya existe.").format(name))
+
+    doc = frappe.get_doc({
+        "doctype": "Shift Type",
+        "name": name,
+        "__newname": name,
+        "start_time": start_time,
+        "end_time": end_time,
+        "enable_auto_attendance": 1,
+        "determine_check_in_and_check_out": "Alternating entries as IN and OUT during the same shift",
+        "working_hours_calculation_based_on": "First Check-in and Last Check-out",
+        "begin_check_in_before_shift_start_time": 60,
+        "allow_check_out_after_shift_end_time": 60,
+        "enable_late_entry_marking": 1,
+        "late_entry_grace_period": 0,
+        "enable_early_exit_marking": 1,
+        "early_exit_grace_period": 0,
+        "process_attendance_after": "2026-01-01",
+    })
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return {"name": doc.name, "start_time": str(doc.start_time), "end_time": str(doc.end_time)}
+
+
+@frappe.whitelist()
+def assign_shift(employee, shift_type, start_date, end_date=None):
+    """Create a Shift Assignment for an employee."""
+    if not end_date:
+        end_date = start_date
+
+    doc = frappe.get_doc({
+        "doctype": "Shift Assignment",
+        "employee": employee,
+        "shift_type": shift_type,
+        "start_date": start_date,
+        "end_date": end_date,
+    })
+    doc.insert(ignore_permissions=True)
+    doc.submit()
+    frappe.db.commit()
+    return {"name": doc.name}
+
+
+@frappe.whitelist()
+def get_weekly_panel_data(week_start):
+    """Return panel data for a 7-day week starting on *week_start* (Monday).
+
+    Returns a list of dicts, one per employee, each with a `days` list of 7 items.
+    """
+    from datetime import date as date_type
+
+    week_start = datetime.strptime(week_start, "%Y-%m-%d").date()
+    week_end = week_start + timedelta(days=6)
+    today = datetime.now().date()
+
+    # ── 1. Employees with shift assignments in this range ──
+    assignments = frappe.get_all(
+        "Shift Assignment",
+        filters={
+            "start_date": ["<=", str(week_end)],
+            "end_date": [">=", str(week_start)],
+            "docstatus": 1,
+        },
+        fields=["employee", "employee_name", "shift_type", "start_date", "end_date"],
+        order_by="employee_name ASC",
+    )
+
+    # Also fetch employees with no assignments but who are active
+    all_employees = frappe.get_all(
+        "Employee",
+        filters={"status": "Active"},
+        fields=["name", "employee_name"],
+        order_by="employee_name ASC",
+    )
+
+    # Build employee map
+    emp_map = {}
+    for emp in all_employees:
+        emp_map[emp.name] = {
+            "employee": emp.name,
+            "employee_name": emp.employee_name,
+            "shifts": {},  # date_str -> shift_type
+        }
+
+    for asgn in assignments:
+        eid = asgn.employee
+        if eid not in emp_map:
+            continue
+        s = asgn.start_date
+        e = asgn.end_date or asgn.start_date
+        d = max(s, week_start)
+        end = min(e, week_end)
+        while d <= end:
+            emp_map[eid]["shifts"][str(d)] = asgn.shift_type
+            d += timedelta(days=1)
+
+    # ── 2. Checkins in this range ──
+    checkins = frappe.get_all(
+        "Employee Checkin",
+        filters={
+            "time": ["between", [str(week_start), str(week_end) + " 23:59:59"]],
+        },
+        fields=["employee", "time", "custom_registration_type"],
+        order_by="time ASC",
+    )
+
+    # Group checkins by employee and date
+    checkin_map = {}  # emp -> date_str -> list of {time, action}
+    for c in checkins:
+        eid = c.employee
+        d = c.time.date() if isinstance(c.time, datetime) else c.time
+        ds = str(d)
+        checkin_map.setdefault(eid, {}).setdefault(ds, []).append({
+            "time": c.time,
+            "action": (c.custom_registration_type or "").lower(),
+        })
+
+    # ── 3. Leave applications (approved) ──
+    leaves = frappe.get_all(
+        "Leave Application",
+        filters={
+            "from_date": ["<=", str(week_end)],
+            "to_date": [">=", str(week_start)],
+            "status": "Approved",
+        },
+        fields=["employee", "from_date", "to_date", "leave_type"],
+    )
+
+    leave_map = {}  # emp -> date_str -> leave_type
+    for lv in leaves:
+        eid = lv.employee
+        d = max(lv.from_date, week_start)
+        end = min(lv.to_date, week_end)
+        while d <= end:
+            leave_map.setdefault(eid, {})[str(d)] = lv.leave_type
+            d += timedelta(days=1)
+
+    # ── 4. Shift Type details ──
+    shift_types = {}
+    for st in frappe.get_all("Shift Type", fields=["name", "start_time", "end_time",
+                                                     "begin_check_in_before_shift_start_time",
+                                                     "allow_check_out_after_shift_end_time",
+                                                     "late_entry_grace_period",
+                                                     "early_exit_grace_period"]):
+        shift_types[st.name] = st
+
+    # ── 5. Build result ──
+    result = []
+    for eid, info in emp_map.items():
+        days = []
+        for i in range(7):
+            d = week_start + timedelta(days=i)
+            ds = str(d)
+            shift_name = info["shifts"].get(ds)
+            leave_type = leave_map.get(eid, {}).get(ds)
+            day_checkins = checkin_map.get(eid, {}).get(ds, [])
+
+            status = "not_scheduled"
+            shift_label = ""
+
+            if leave_type:
+                status = "leave"
+                shift_label = leave_type
+            elif shift_name:
+                st = shift_types.get(shift_name, {})
+                shift_label = shift_name
+
+                if d > today:
+                    status = "future"
+                elif not day_checkins:
+                    status = "absent"
+                else:
+                    # Determine on-time vs late/early
+                    first_in = None
+                    last_out = None
+                    for ck in day_checkins:
+                        if ck["action"] == "clock-in" and first_in is None:
+                            first_in = ck["time"]
+                        if ck["action"] == "clock-out":
+                            last_out = ck["time"]
+
+                    shift_start = st.get("start_time") or timedelta(hours=8)
+                    shift_end = st.get("end_time") or timedelta(hours=17)
+                    grace_in = int(st.get("late_entry_grace_period") or 0)
+                    grace_out = int(st.get("early_exit_grace_period") or 0)
+
+                    # Convert shift times to datetime for comparison
+                    if isinstance(shift_start, timedelta):
+                        shift_start_dt = datetime.combine(d, time()) + shift_start
+                    else:
+                        shift_start_dt = datetime.combine(d, time()) + shift_start
+
+                    if isinstance(shift_end, timedelta):
+                        shift_end_dt = datetime.combine(d, time()) + shift_end
+                    else:
+                        shift_end_dt = datetime.combine(d, time()) + shift_end
+
+                    late_in = False
+                    early_out = False
+
+                    if first_in:
+                        checkin_time = first_in if isinstance(first_in, datetime) else datetime.combine(d, first_in)
+                        if checkin_time.replace(tzinfo=None) > (shift_start_dt + timedelta(minutes=grace_in)):
+                            late_in = True
+
+                    if last_out:
+                        checkout_time = last_out if isinstance(last_out, datetime) else datetime.combine(d, last_out)
+                        if checkout_time.replace(tzinfo=None) < (shift_end_dt - timedelta(minutes=grace_out)):
+                            early_out = True
+
+                    if late_in or early_out:
+                        status = "out_of_schedule"
+                    else:
+                        status = "on_time"
+            else:
+                if d > today:
+                    status = "future"
+                else:
+                    status = "not_scheduled"
+
+            days.append({
+                "date": ds,
+                "shift": shift_label,
+                "status": status,
+            })
+
+        # Only include employees that have at least one shift assignment
+        has_shift = any(day["shift"] for day in days)
+        if has_shift or any(checkin_map.get(eid, {}).get(str(week_start + timedelta(days=i)), []) for i in range(7)):
+            result.append({
+                "employee": eid,
+                "employee_name": info["employee_name"],
+                "days": days,
+            })
+
+    return result
