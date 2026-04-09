@@ -46,6 +46,9 @@
     table-layout: fixed;
     font-size: 13px;
 }
+.shift-grid tbody tr {
+    height: 54px;
+}
 .shift-grid th, .shift-grid td {
     border: 1px solid var(--border-color, #d1d8dd);
     padding: 6px 8px;
