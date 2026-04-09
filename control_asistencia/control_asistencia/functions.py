@@ -293,7 +293,7 @@ def get_current_status(client_timezone=None):
 def calculate_worked_hours(employee, client_timezone=None):
     """Return formatted worked and break hours for *employee* today."""
     client_tz = _resolve_tz(client_timezone)
-    start_utc, end_utc, _ = _day_range(client_tz)
+    start_utc, end_utc, _now = _day_range(client_tz)
 
     records = _fetch_records(employee, start_utc, end_utc)
     acc = _accumulate(records, reference_now=datetime.now(pytz.UTC))
