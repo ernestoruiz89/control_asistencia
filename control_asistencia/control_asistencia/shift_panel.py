@@ -24,6 +24,25 @@ def _fmt_hour(t):
     return f"{display_h}{suffix}"
 
 
+def _fmt_hour_12(t):
+    """Format a time object as '8:00am', '5:00pm', etc."""
+    if isinstance(t, str):
+        parts = t.split(":")
+        h, m = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+    elif isinstance(t, timedelta):
+        total_secs = int(t.total_seconds())
+        h = total_secs // 3600
+        m = (total_secs % 3600) // 60
+    else:
+        h, m = t.hour, t.minute
+
+    suffix = "am" if h < 12 else "pm"
+    display_h = h if h <= 12 else h - 12
+    if display_h == 0:
+        display_h = 12
+    return f"{display_h}:{m:02d}{suffix}"
+
+
 @frappe.whitelist()
 def get_shift_types():
     """Return all Shift Type records."""
@@ -205,7 +224,10 @@ def get_weekly_panel_data(week_start):
                 shift_label = leave_type
             elif shift_name:
                 st = shift_types.get(shift_name, {})
-                shift_label = shift_name
+                if st and st.get("start_time") is not None and st.get("end_time") is not None:
+                    shift_label = f"{_fmt_hour_12(st['start_time'])} - {_fmt_hour_12(st['end_time'])}"
+                else:
+                    shift_label = shift_name
 
                 if d > today:
                     status = "future"
