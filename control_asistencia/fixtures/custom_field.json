@@ -1,5 +1,6 @@
 [
     {
+        "name": "Employee Checkin-custom_registration_type",
         "doctype": "Custom Field",
         "dt": "Employee Checkin",
         "module": "Control Asistencia",
