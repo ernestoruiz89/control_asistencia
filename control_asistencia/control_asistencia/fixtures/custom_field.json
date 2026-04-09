@@ -1,0 +1,13 @@
+[
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Checkin",
+        "module": "Control Asistencia",
+        "fieldname": "custom_registration_type",
+        "fieldtype": "Select",
+        "label": "Registration Type",
+        "options": "\nclock-in\nclock-out\nbreak start\nbreak end",
+        "insert_after": "attendance",
+        "translatable": 1
+    }
+]

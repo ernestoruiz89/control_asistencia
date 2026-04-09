@@ -5,6 +5,15 @@ app_description = "Control de asistencia de empleados"
 app_email = "eruiz@wbapps.com"
 app_license = "mit"
 
+# Fixtures
+# ------------------
+fixtures = [
+    {
+        "dt": "Custom Field",
+        "filters": [["module", "=", "Control Asistencia"]],
+    },
+]
+
 # Apps
 # ------------------
 

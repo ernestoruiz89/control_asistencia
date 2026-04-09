@@ -1,373 +1,346 @@
 import frappe
+from frappe import _
 from datetime import datetime, timedelta
 import pytz
-import logging
 
-ENTRY_SET        = {"entrada", "clock‑in", "clock in"}
-EXIT_SET         = {"salida", "clock‑out", "clock out"}
-BREAK_START_SET  = {"break start", "inicio de pausa", "salir a almorzar"}
-BREAK_END_SET    = {"break end", "finalización de pausa", "regresar de almorzar"}
-
-def is_entry(action):        return action in ENTRY_SET
-def is_exit(action):         return action in EXIT_SET
-def is_break_start(action):  return action in BREAK_START_SET
-def is_break_end(action):    return action in BREAK_END_SET
+# ---------------------------------------------------------------------------
+# Action classification sets (translatable labels should match the values
+# stored in *custom_registration_type* – keep lowercase).
+# ---------------------------------------------------------------------------
+ENTRY_SET       = {"clock-in"}
+EXIT_SET        = {"clock-out"}
+BREAK_START_SET = {"break start"}
+BREAK_END_SET   = {"break end"}
 
 
+def is_entry(action):       return action in ENTRY_SET
+def is_exit(action):        return action in EXIT_SET
+def is_break_start(action): return action in BREAK_START_SET
+def is_break_end(action):   return action in BREAK_END_SET
 
-@frappe.whitelist()
-def get_server_time():
-    """Devuelve la hora actual del servidor."""
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+def _get_employee():
+    """Return the Employee ID linked to the current session user."""
+    employee = frappe.db.get_value(
+        "Employee", {"user_id": frappe.session.user}, "name"
+    )
+    if not employee:
+        frappe.throw(_("No se encontró un empleado asociado al usuario actual."))
+    return employee
+
+
+def _day_range(client_tz):
+    """Return (start_utc, end_utc, now_client) for today in *client_tz*."""
+    now_client = datetime.now(client_tz)
+    start = now_client.replace(hour=0, minute=0, second=0, microsecond=0)
+    end   = now_client.replace(hour=23, minute=59, second=59, microsecond=999999)
+    utc   = pytz.UTC
+    return start.astimezone(utc), end.astimezone(utc), now_client
+
+
+def _fetch_records(employee, start_utc, end_utc):
+    """Fetch today's checkin records for *employee* ordered by time ASC."""
+    return frappe.db.get_all(
+        "Employee Checkin",
+        filters={
+            "employee": employee,
+            "time": ["between", [start_utc, end_utc]],
+        },
+        fields=["custom_registration_type", "time"],
+        order_by="time ASC",
+    )
+
+
+def _accumulate(records, reference_now=None, strip_tz=False):
+    """Walk *records* and return accumulated work/break timedeltas + state.
+
+    Parameters
+    ----------
+    records : list[dict]
+        Checkin records with ``custom_registration_type`` and ``time``.
+    reference_now : datetime | None
+        If the employee is still working/on‑break, use this moment as the
+        upper bound.  When *None*, open intervals are ignored.
+    strip_tz : bool
+        If *True*, make each timestamp timezone‑naive before arithmetic
+        (useful when *reference_now* is also naive).
+
+    Returns
+    -------
+    dict  with keys ``total_work``, ``total_break``, ``working``,
+          ``is_on_break``, ``is_finished``, ``last_action``,
+          ``start_time``, ``break_start``.
+    """
+    total_work  = timedelta()
+    total_break = timedelta()
+    working     = False
+    break_start = None
+    last_time   = None
+    start_time  = None
+    last_action = None
+
+    for rec in records:
+        action = rec["custom_registration_type"].lower()
+        t = rec["time"]
+        if strip_tz:
+            t = t.replace(tzinfo=None)
+
+        last_action = action
+
+        if is_entry(action):
+            start_time = start_time or t
+            working, last_time = True, t
+
+        elif is_break_start(action) and working and not break_start:
+            total_work  += t - last_time
+            break_start  = t
+            last_time    = t
+
+        elif is_break_end(action) and break_start:
+            total_break += t - break_start
+            break_start  = None
+            last_time    = t
+
+        elif is_exit(action) and working:
+            if break_start:
+                total_break += t - break_start
+                break_start  = None
+            total_work += t - last_time
+            working     = False
+            last_time   = None
+
+    # If the employee is still working / on break right now
+    if reference_now is not None and working:
+        now = reference_now
+        if strip_tz:
+            now = now.replace(tzinfo=None)
+        if break_start:
+            total_break += now - break_start
+        elif last_time:
+            total_work += now - last_time
+
     return {
-        "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "total_work":   total_work,
+        "total_break":  total_break,
+        "working":      working,
+        "is_on_break":  break_start is not None,
+        "is_finished":  not working and last_action is not None and is_exit(last_action or ""),
+        "last_action":  last_action,
+        "start_time":   start_time,
+        "break_start":  break_start,
     }
 
+
+def _fmt_td(td):
+    """Format a timedelta as HH:MM:SS (no microseconds)."""
+    return str(td).split(".")[0]
+
+
+def _resolve_tz(client_timezone=None):
+    """Return a pytz timezone; defaults to UTC."""
+    return pytz.timezone(client_timezone) if client_timezone else pytz.UTC
+
+
+# ---------------------------------------------------------------------------
+# Public / whitelisted API
+# ---------------------------------------------------------------------------
 @frappe.whitelist()
-def register_checkin(log_type, custom_tipo_registro, latitude=None, longitude=None, client_timezone=None):
-    import pytz
-    from datetime import datetime
+def get_server_time():
+    """Return the current server time."""
+    return {
+        "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
 
-    # Validar que el empleado existe
-    employee = frappe.db.get_value('Employee', {'user_id': frappe.session.user}, 'name')
-    if not employee:
-        frappe.throw("No se encontró un empleado asociado al usuario actual.")
 
-    # Validar latitud y longitud
-    if latitude is None or longitude is None:
-        frappe.throw("Se requieren valores de latitud y longitud para el registro.")
+@frappe.whitelist()
+def register_checkin(
+    log_type,
+    custom_registration_type,
+    latitude=None,
+    longitude=None,
+    client_timezone=None,
+):
+    """Create an Employee Checkin record.
 
-    # Obtener la zona horaria del cliente o usar UTC por defecto
-    client_tz = pytz.timezone(client_timezone) if client_timezone else pytz.UTC
+    When the action is an *exit*, a comment with worked / break hours is
+    automatically appended.
+    """
+    employee = _get_employee()
 
-    # Hora actual en la zona horaria del cliente
-    current_time_client = datetime.now(client_tz)
+    require_geo = frappe.db.get_single_value(
+        "Ajustes de Control Asistencia", "require_geolocation"
+    )
+    if require_geo and (latitude is None or longitude is None):
+        frappe.throw(_("Se requieren valores de latitud y longitud para el registro."))
 
-    # Registrar el check-in
-    custom_tipo_registro = custom_tipo_registro.lower()
+    client_tz = _resolve_tz(client_timezone)
+    now_client = datetime.now(client_tz)
+
+    custom_registration_type = custom_registration_type.lower()
     checkin = frappe.get_doc({
         "doctype": "Employee Checkin",
         "employee": employee,
         "log_type": log_type,
-        "time": current_time_client.strftime('%Y-%m-%d %H:%M:%S'),  # Guardar en hora local
-        "custom_tipo_registro": custom_tipo_registro,
+        "time": now_client.strftime("%Y-%m-%d %H:%M:%S"),
+        "custom_registration_type": custom_registration_type,
         "latitude": latitude,
-        "longitude": longitude
+        "longitude": longitude,
     })
     checkin.insert()
     frappe.db.commit()
 
-    # Si es "salida", calcular y agregar comentario
-    if custom_tipo_registro == "salida":
-        time_data = calculate_worked_hours(employee)
-        worked_hours = time_data.get("worked_hours", "No se pudo calcular el tiempo laborado.")
-        break_hours = time_data.get("break_hours", "No se pudo calcular el tiempo de almuerzo.")
-
-        # Agregar el comentario al registro
-        checkin.add_comment('Comment', f"{worked_hours}\n{break_hours}")
+    # On exit: attach a summary comment
+    if is_exit(custom_registration_type):
+        time_data = calculate_worked_hours(employee, client_timezone)
+        worked = time_data.get("worked_hours", _("No se pudo calcular el tiempo laborado."))
+        brk    = time_data.get("break_hours",  _("No se pudo calcular el tiempo de break."))
+        checkin.add_comment("Comment", f"{worked}\n{brk}")
         frappe.db.commit()
 
-    return f"Check-in registrado con éxito a las {current_time_client.strftime('%Y-%m-%d %H:%M:%S')} ({client_timezone or 'UTC'})"
+    return _(
+        "Registro guardado exitosamente a las {0} ({1})"
+    ).format(now_client.strftime("%Y-%m-%d %H:%M:%S"), client_timezone or "UTC")
+
 
 @frappe.whitelist()
 def get_last_checkin(employee):
-    """Obtiene el último registro del empleado en el Doctype Employee Checkin."""
-    last_checkin = frappe.db.get_all(
+    """Return the latest Employee Checkin record for *employee*."""
+    rows = frappe.db.get_all(
         "Employee Checkin",
         filters={"employee": employee},
-        fields=["custom_tipo_registro", "time", "entry_time", "total_break_time"],
+        fields=["custom_registration_type", "time", "entry_time", "total_break_time"],
         order_by="time DESC",
-        limit=1
+        limit=1,
     )
-    return last_checkin[0] if last_checkin else None
-    
+    return rows[0] if rows else None
+
+
 @frappe.whitelist()
 def get_total_break_time(employee):
-    """Calcula el tiempo total de almuerzo desde la última entrada."""
+    """Calculate the total break time since the last clock‑in."""
     last_entry = frappe.db.get_all(
         "Employee Checkin",
-        filters={"employee": employee, "custom_tipo_registro": "Entrada"},
+        filters={"employee": employee, "custom_registration_type": ["in", list(ENTRY_SET)]},
         fields=["time"],
         order_by="time DESC",
-        limit=1
+        limit=1,
     )
-
     if not last_entry:
         return {"total_break_time": 0}
 
-    start_time = last_entry[0]["time"]
-
+    since = last_entry[0]["time"]
+    all_labels = list(BREAK_START_SET) + list(BREAK_END_SET)
     breaks = frappe.db.get_all(
         "Employee Checkin",
         filters={
             "employee": employee,
-            "time": [">=", start_time],
-            "custom_tipo_registro": ["in", ["Salir a Almorzar", "Regresar de Almorzar"]],
+            "time": [">=", since],
+            "custom_registration_type": ["in", all_labels],
         },
-        fields=["custom_tipo_registro", "time"],
-        order_by="time ASC"
+        fields=["custom_registration_type", "time"],
+        order_by="time ASC",
     )
 
-    total_break_time = 0
-    break_start = None
-    for record in breaks:
-        if record["custom_tipo_registro"] == "Salir a Almorzar":
-            break_start = record["time"]
-        elif record["custom_tipo_registro"] == "Regresar de Almorzar" and break_start:
-            total_break_time += (record["time"] - break_start).total_seconds() * 1000  # Convertir a milisegundos
-            break_start = None
+    total_ms = 0
+    brk_start = None
+    for rec in breaks:
+        action = rec["custom_registration_type"].lower()
+        if is_break_start(action):
+            brk_start = rec["time"]
+        elif is_break_end(action) and brk_start:
+            total_ms += (rec["time"] - brk_start).total_seconds() * 1000
+            brk_start = None
 
-    return {"total_break_time": total_break_time}
+    return {"total_break_time": total_ms}
+
 
 @frappe.whitelist()
 def get_current_status(client_timezone=None):
-    from datetime import datetime, timedelta
-    import pytz
+    """Return the current attendance state for today (clock‑in time, break
+    status, worked/break durations, etc.)."""
+    employee  = _get_employee()
+    client_tz = _resolve_tz(client_timezone)
 
-    # Obtener el empleado asociado al usuario actual
-    employee = frappe.db.get_value('Employee', {'user_id': frappe.session.user}, 'name')
-    if not employee:
-        frappe.throw("No se encontró un empleado asociado al usuario actual.")
+    start_utc, end_utc, now_client = _day_range(client_tz)
+    records = _fetch_records(employee, start_utc, end_utc)
 
-    # Obtener la zona horaria del cliente o usar UTC por defecto
-    server_tz = pytz.UTC
-    client_tz = pytz.timezone(client_timezone) if client_timezone else server_tz
+    acc = _accumulate(records, reference_now=datetime.now(pytz.UTC))
 
-    # Hora actual en la zona horaria del cliente
-    now_client = datetime.now(client_tz)
+    # Convert key timestamps to the client timezone for the response
+    start_iso = None
+    if acc["start_time"]:
+        start_iso = acc["start_time"].astimezone(client_tz).isoformat()
 
-    # Calcular el inicio y fin del día en la zona horaria del cliente
-    start_of_day_client = now_client.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day_client = now_client.replace(hour=23, minute=59, second=59, microsecond=999999)
+    break_start_iso = None
+    if acc["break_start"]:
+        break_start_iso = acc["break_start"].astimezone(client_tz).isoformat()
 
-    # Convertir estos valores a UTC para filtrar correctamente
-    start_of_day_utc = start_of_day_client.astimezone(server_tz)
-    end_of_day_utc = end_of_day_client.astimezone(server_tz)
-
-    # Inicializar el diccionario de datos
-    data = {
-        "start_time": None,
-        "break_start_time": None,
-        "total_break_time": 0,
-        "is_on_break": False,
-        "is_finished": False,
-        "last_action": None
+    return {
+        "start_time":       start_iso,
+        "break_start_time": break_start_iso,
+        "total_break_time": int(acc["total_break"].total_seconds() * 1000),
+        "is_on_break":      acc["is_on_break"],
+        "is_finished":      acc["is_finished"],
+        "last_action":      acc["last_action"],
     }
 
-    # Obtener los registros de check-in dentro del rango UTC calculado
-    records = frappe.db.get_all(
-        "Employee Checkin",
-        filters={
-            "employee": employee,
-            "time": ["between", [start_of_day_utc, end_of_day_utc]]
-        },
-        fields=["custom_tipo_registro", "time"],
-        order_by="time ASC"
-    )
-
-    # Variables auxiliares
-    start_time = None
-    break_start_time = None
-    total_break_time = timedelta()
-    is_on_break = False
-    is_finished = False
-    last_action = None
-    break_start = None
-
-    # Procesar los registros
-    for record in records:
-        action = record["custom_tipo_registro"].lower()
-        time = record["time"]
-
-        last_action = action  # Actualizar la última acción
-
-        if is_entry(action):
-            start_time = time
-        elif is_break_start(action):
-            break_start = time
-            is_on_break = True
-        elif is_break_end(action):
-            if break_start:
-                total_break_time += time - break_start
-                break_start = None
-                is_on_break = False
-        elif is_exit(action):
-            is_finished = True
-
-    # Convertir las fechas a la zona horaria del cliente para la respuesta
-    if start_time:
-        start_time = start_time.astimezone(client_tz).isoformat()
-    if break_start:
-        break_start_time = break_start.astimezone(client_tz).isoformat()
-
-    # Actualizar el diccionario de datos
-    data["start_time"] = start_time
-    data["break_start_time"] = break_start_time
-    data["total_break_time"] = int(total_break_time.total_seconds() * 1000)  # En milisegundos
-    data["is_on_break"] = is_on_break
-    data["is_finished"] = is_finished
-    data["last_action"] = last_action
-
-    return data
 
 @frappe.whitelist()
 def calculate_worked_hours(employee, client_timezone=None):
-    # ➊ Rango del día en zona del cliente ➜ convertir a UTC para consultar
-    server_tz = pytz.UTC
-    client_tz = pytz.timezone(client_timezone) if client_timezone else server_tz
-    now_cli   = datetime.now(client_tz)
-    day_start = now_cli.replace(hour=0, minute=0, second=0, microsecond=0)
-    day_end   = now_cli.replace(hour=23, minute=59, second=59, microsecond=999999)
-    start_utc, end_utc = day_start.astimezone(server_tz), day_end.astimezone(server_tz)
+    """Return formatted worked and break hours for *employee* today."""
+    client_tz = _resolve_tz(client_timezone)
+    start_utc, end_utc, _ = _day_range(client_tz)
 
-    # ➋ Traer registros del día
-    records = frappe.db.get_all(
-        "Employee Checkin",
-        filters={"employee": employee, "time": ["between", [start_utc, end_utc]]},
-        fields=["custom_tipo_registro", "time"],
-        order_by="time ASC"
-    )
-
-    # ➌ Recorrer y acumular
-    total_work   = timedelta()
-    total_break  = timedelta()
-    working      = False
-    break_start  = None
-    last_time    = None
-
-    for rec in records:
-        action = rec["custom_tipo_registro"].lower()
-        time   = rec["time"]
-
-        if is_entry(action):
-            working, last_time = True, time
-
-        elif is_break_start(action) and working and not break_start:
-            total_work  += time - last_time
-            break_start, last_time = time, time
-
-        elif is_break_end(action) and break_start:
-            total_break += time - break_start
-            break_start, last_time = None, time
-
-        elif is_exit(action) and working:
-            if break_start:                          # cierre durante un break
-                total_break += time - break_start
-                break_start = None
-            total_work += time - last_time
-            working     = False
-
-    # ➍ Si sigue laborando en este instante
-    now_srv = datetime.now(server_tz)
-    if working:
-        if break_start:
-            total_break += now_srv - break_start
-        else:
-            total_work  += now_srv - last_time
+    records = _fetch_records(employee, start_utc, end_utc)
+    acc = _accumulate(records, reference_now=datetime.now(pytz.UTC))
 
     return {
-        "worked_hours": f"Tiempo total laborado: {str(total_work).split('.')[0]}",
-        "break_hours":  f"Tiempo de break: {str(total_break).split('.')[0]}"
+        "worked_hours": _("Tiempo total laborado: {0}").format(_fmt_td(acc["total_work"])),
+        "break_hours":  _("Tiempo de break: {0}").format(_fmt_td(acc["total_break"])),
     }
+
 
 @frappe.whitelist()
 def get_current_worked_hours(client_time=None, client_timezone=None):
-    """Devuelve horas trabajadas y tiempo de break transcurridos hoy."""
-    from datetime import datetime, timedelta
-    import pytz
+    """Return worked and break hours using the client's local clock as *now*.
 
-    # ➊ Validaciones básicas -------------------------------------------------
+    This is useful when the server and client clocks may differ.
+    """
     if not client_time:
-        frappe.throw("Se requiere la hora del cliente (ISO: YYYY‑MM‑DDTHH:MM:SS).")
+        frappe.throw(_("Se requiere la hora del cliente (formato ISO: YYYY-MM-DDTHH:MM:SS)."))
 
     try:
-        client_time = datetime.strptime(client_time, "%Y-%m-%dT%H:%M:%S")
+        client_dt = datetime.strptime(client_time, "%Y-%m-%dT%H:%M:%S")
     except ValueError:
-        frappe.throw("Formato de hora del cliente inválido.")
+        frappe.throw(_("Formato de hora del cliente inválido."))
 
-    employee = frappe.db.get_value('Employee', {'user_id': frappe.session.user}, 'name')
-    if not employee:
-        frappe.throw("No se encontró un empleado asociado al usuario actual.")
+    employee = _get_employee()
 
-    # ➋ Rango de hoy en hora del cliente (naive) ----------------------------
-    day_start = client_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    day_end   = client_time.replace(hour=23, minute=59, second=59, microsecond=999999)
+    day_start = client_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end   = client_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-    # ➌ Traer registros ------------------------------------------------------
     records = frappe.get_all(
         "Employee Checkin",
         filters={
             "employee": employee,
-            "time": ["between", [day_start, day_end]]
+            "time": ["between", [day_start, day_end]],
         },
-        fields=["custom_tipo_registro", "time"],
-        order_by="time ASC"
+        fields=["custom_registration_type", "time"],
+        order_by="time ASC",
     )
 
     if not records:
         return {
-            "worked_hours": "Tiempo total laborado: 00:00:00",
-            "break_hours":  "Tiempo de break: 00:00:00"
+            "worked_hours": _("Tiempo total laborado: 00:00:00"),
+            "break_hours":  _("Tiempo de break: 00:00:00"),
         }
 
-    # ➍ Recorrer y acumular --------------------------------------------------
-    total_work_time  = timedelta()
-    total_break_time = timedelta()
-    working          = False
-    break_start      = None
-    last_time        = None
-
-    for rec in records:
-        action = rec["custom_tipo_registro"].lower()
-        time   = rec["time"].replace(tzinfo=None)   # aseguramos naive
-
-        if is_entry(action):
-            working, last_time = True, time
-
-        elif is_break_start(action) and working and not break_start:
-            total_work_time  += time - last_time
-            break_start, last_time = time, time
-
-        elif is_break_end(action) and break_start:
-            total_break_time += time - break_start
-            break_start, last_time = None, time
-
-        elif is_exit(action) and working:
-            if break_start:
-                total_break_time += time - break_start
-                break_start = None
-            total_work_time += time - last_time
-            working, last_time = False, None
-
-    # 5  Si sigue laborando al momento de la consulta ------------------------
-    if working:
-        if break_start:
-            total_break_time += client_time - break_start
-        else:
-            total_work_time  += client_time - last_time
-
-    # 6 Formatear resultados -------------------------------------------------
-    def fmt(td):  # quita microsegundos
-        return str(td).split('.')[0]
+    acc = _accumulate(records, reference_now=client_dt, strip_tz=True)
 
     return {
-        "worked_hours": f"Tiempo total laborado: {fmt(total_work_time)}",
-        "break_hours":  f"Tiempo de break: {fmt(total_break_time)}"
+        "worked_hours": _("Tiempo total laborado: {0}").format(_fmt_td(acc["total_work"])),
+        "break_hours":  _("Tiempo de break: {0}").format(_fmt_td(acc["total_break"])),
     }
-
-
-
-
-def get_formatted_time(employee):
-    last_checkin = frappe.db.get_value(
-        "Employee Checkin",
-        {"employee": employee},
-        "time",
-        order_by="time DESC"
-    )
-
-    if not last_checkin:
-        return "No hay registros disponibles."
-
-    # Convertir la hora UTC al tiempo del cliente
-    client_time = convert_utc_to_user_timezone(last_checkin, "America/Managua")
-    return client_time.strftime("%Y-%m-%d %H:%M:%S")
