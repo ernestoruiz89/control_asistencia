@@ -375,7 +375,7 @@ def get_day_details(employee, date):
             "employee": employee,
             "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]],
         },
-        fields=["name", "time", "custom_registration_type"],
+        fields=["name", "time", "custom_registration_type", "log_type"],
         order_by="time ASC",
     )
     # Format times as strings for JSON serialization

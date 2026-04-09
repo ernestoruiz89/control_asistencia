@@ -288,15 +288,26 @@ function _buildDayDialog(employee, employeeName, date, details) {
             const dt = new Date(t);
             return dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', hour12: true });
         };
-        const typeLabel = (t) => {
-            const v = (t || '').toLowerCase();
-            if (v === 'clock-in') return '🟢 Entrada';
-            if (v === 'clock-out') return '🔴 Salida';
-            return t || '—';
+        // Resolve action: prefer custom_registration_type, fallback to log_type
+        const resolveAction = (c) => {
+            const crt = (c.custom_registration_type || '').toLowerCase();
+            if (crt) return crt;
+            // Fallback to log_type field (IN/OUT)
+            const lt = (c.log_type || '').toUpperCase();
+            if (lt === 'IN') return 'clock-in';
+            if (lt === 'OUT') return 'clock-out';
+            return '';
+        };
+        const typeLabel = (action) => {
+            if (action === 'clock-in')     return '🟢 Entrada';
+            if (action === 'clock-out')    return '🔴 Salida';
+            if (action === 'break start')  return '🟡 Inicio Break';
+            if (action === 'break end')    return '🔵 Fin Break';
+            return action || '—';
         };
 
-        const firstIn = checkins.find(c => (c.custom_registration_type || '').toLowerCase() === 'clock-in');
-        const lastOut = [...checkins].reverse().find(c => (c.custom_registration_type || '').toLowerCase() === 'clock-out');
+        const firstIn = checkins.find(c => resolveAction(c) === 'clock-in');
+        const lastOut = [...checkins].reverse().find(c => resolveAction(c) === 'clock-out');
 
         let checkinHtml = '<div class="alert alert-success" style="padding:8px 12px;margin-bottom:6px;font-size:13px;">';
         checkinHtml += `<strong>${__('Registros de asistencia')}</strong><br>`;
@@ -308,9 +319,10 @@ function _buildDayDialog(employee, employeeName, date, details) {
         checkinHtml += '<table style="width:100%;margin-top:6px;font-size:12px;border-collapse:collapse;">';
         checkinHtml += `<tr style="border-bottom:1px solid rgba(0,0,0,0.1);"><th style="text-align:left;padding:2px 4px;">${__('Hora')}</th><th style="text-align:left;padding:2px 4px;">${__('Tipo')}</th></tr>`;
         for (const c of checkins) {
+            const action = resolveAction(c);
             checkinHtml += `<tr style="border-bottom:1px solid rgba(0,0,0,0.05);">
                 <td style="padding:2px 4px;">${fmtTime(c.time)}</td>
-                <td style="padding:2px 4px;">${typeLabel(c.custom_registration_type)}</td>
+                <td style="padding:2px 4px;">${typeLabel(action)}</td>
             </tr>`;
         }
         checkinHtml += '</table></div>';
