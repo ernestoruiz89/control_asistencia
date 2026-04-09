@@ -93,6 +93,16 @@ function bindEvents() {
     });
     document.getElementById('btn-create-shift').addEventListener('click', showCreateShiftDialog);
     document.getElementById('btn-assign-shift').addEventListener('click', showAssignShiftDialog);
+
+    // Click on any day cell to edit
+    document.getElementById('grid-wrapper').addEventListener('click', (e) => {
+        const td = e.target.closest('td[data-employee]');
+        if (!td) return;
+        const employee = td.dataset.employee;
+        const date = td.dataset.date;
+        const empName = td.closest('tr').querySelector('.cell-employee').textContent.trim();
+        showDayEditDialog(employee, empName, date);
+    });
 }
 
 // ── Load & Render ───────────────────────────────────────────────────────────
@@ -147,7 +157,7 @@ function renderGrid(data) {
             const cls = 'cell-' + day.status;
             const label = day.shift || '—';
             const detail = day.detail || STATUS_LABELS[day.status] || '';
-            cells += `<td class="${cls}">
+            cells += `<td class="${cls} day-cell" data-employee="${emp.employee}" data-date="${day.date}">
                 <span class="shift-name">${label}</span>
                 <span class="shift-detail">${detail}</span>
             </td>`;
@@ -206,9 +216,16 @@ function showAssignShiftDialog() {
                     frappe.call({
                         method: `${API}.assign_shift`,
                         args: values,
-                        callback: () => {
+                        freeze: true,
+                        freeze_message: __('Asignando turnos...'),
+                        callback: ({ message }) => {
                             d.hide();
-                            frappe.msgprint(__('Turno asignado correctamente.'));
+                            const n = message.count || 1;
+                            frappe.msgprint(
+                                n === 1
+                                    ? __('Turno asignado correctamente.')
+                                    : __('Se asignaron {0} turnos (uno por día).', [n])
+                            );
                             loadWeek();
                         },
                     });
@@ -217,4 +234,178 @@ function showAssignShiftDialog() {
             d.show();
         },
     });
+}
+
+// ── Day Cell Edit Dialog ────────────────────────────────────────────────────
+
+function showDayEditDialog(employee, employeeName, date) {
+    frappe.call({
+        method: `${API}.get_day_details`,
+        args: { employee, date },
+        freeze: true,
+        freeze_message: __('Cargando...'),
+        callback: ({ message }) => {
+            _buildDayDialog(employee, employeeName, date, message);
+        },
+    });
+}
+
+function _buildDayDialog(employee, employeeName, date, details) {
+    const currentShifts = details.shift_assignments || [];
+    const currentLeaves = details.leave_applications || [];
+    const hasShift = currentShifts.length > 0;
+    const hasLeave = currentLeaves.length > 0;
+
+    const dateObj = new Date(date + 'T12:00:00');
+    const dateDisplay = dateObj.toLocaleDateString('es', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+
+    // ── Build info HTML ──
+    let infoHtml = '<div style="margin-bottom:4px;">';
+    if (hasShift) {
+        infoHtml += `<div class="alert alert-info" style="padding:8px 12px;margin-bottom:6px;font-size:13px;">
+            <strong>${__('Turno actual:')}</strong> ${currentShifts[0].shift_type}
+            <br><small class="text-muted">${currentShifts[0].name}</small>
+        </div>`;
+    }
+    if (hasLeave) {
+        const lv = currentLeaves[0];
+        infoHtml += `<div class="alert alert-warning" style="padding:8px 12px;margin-bottom:6px;font-size:13px;">
+            <strong>${__('Permiso:')}</strong> ${lv.leave_type}${lv.half_day ? ' (' + __('Medio día') + ')' : ''}
+            ${lv.description ? '<br>' + __('Motivo:') + ' ' + lv.description : ''}
+            <br><small class="text-muted">${lv.name}</small>
+        </div>`;
+    }
+    if (!hasShift && !hasLeave) {
+        infoHtml += `<div class="text-muted" style="margin-bottom:6px;font-size:13px;">${__('Sin turno ni permiso asignado.')}</div>`;
+    }
+    infoHtml += '</div>';
+
+    const d = new frappe.ui.Dialog({
+        title: `${employeeName} — ${dateDisplay}`,
+        fields: [
+            { fieldname: 'info_html', fieldtype: 'HTML', options: infoHtml },
+            { fieldtype: 'Section Break', label: __('Turno') },
+            { fieldname: 'shift_type', label: __('Tipo de Turno'), fieldtype: 'Select', options: '' },
+            { fieldtype: 'Section Break', label: __('Permiso / Vacaciones'), collapsible: 1,
+              collapsible_depends_on: 'eval:false' },
+            { fieldname: 'leave_type', label: __('Tipo de Permiso'), fieldtype: 'Link', options: 'Leave Type' },
+            { fieldname: 'half_day', label: __('Medio Día'), fieldtype: 'Check', default: 0 },
+            { fieldname: 'description', label: __('Descripción'), fieldtype: 'Small Text' },
+        ],
+        size: 'large',
+        primary_action_label: __('Asignar Turno'),
+        primary_action: (values) => {
+            if (!values.shift_type) {
+                frappe.msgprint(__('Seleccione un tipo de turno.'));
+                return;
+            }
+            frappe.call({
+                method: `${API}.assign_shift`,
+                args: { employee, shift_type: values.shift_type, start_date: date },
+                freeze: true,
+                freeze_message: __('Asignando turno...'),
+                callback: () => {
+                    d.hide();
+                    frappe.show_alert({ message: __('Turno asignado.'), indicator: 'green' });
+                    loadWeek();
+                },
+            });
+        },
+    });
+
+    // ── Custom footer buttons ──
+    const $footer = d.$wrapper.find('.modal-footer');
+
+    // "Quitar Turno" button (only if shift exists)
+    if (hasShift) {
+        const $btnRemove = $(`<button class="btn btn-danger btn-sm" style="position:absolute;left:15px;">
+            ${__('Quitar Turno')}
+        </button>`);
+        $footer.css('position', 'relative').prepend($btnRemove);
+        $btnRemove.on('click', () => {
+            frappe.confirm(__('¿Desea quitar el turno de este día?'), () => {
+                frappe.call({
+                    method: `${API}.remove_shift_assignment`,
+                    args: { employee, date },
+                    freeze: true,
+                    callback: () => {
+                        d.hide();
+                        frappe.show_alert({ message: __('Turno removido.'), indicator: 'orange' });
+                        loadWeek();
+                    },
+                });
+            });
+        });
+    }
+
+    // "Crear Permiso" button
+    const $btnLeave = $(`<button class="btn btn-warning btn-sm" style="margin-right:8px;">
+        ${__('Crear Permiso')}
+    </button>`);
+    $footer.find('.btn-primary').before($btnLeave);
+    $btnLeave.on('click', () => {
+        const values = d.get_values(true);
+        if (!values || !values.leave_type) {
+            frappe.msgprint(__('Seleccione un tipo de permiso.'));
+            return;
+        }
+        frappe.call({
+            method: `${API}.create_leave`,
+            args: {
+                employee,
+                leave_type: values.leave_type,
+                from_date: date,
+                to_date: date,
+                half_day: values.half_day ? 1 : 0,
+                half_day_date: values.half_day ? date : null,
+                description: values.description || '',
+            },
+            freeze: true,
+            freeze_message: __('Creando permiso...'),
+            callback: () => {
+                d.hide();
+                frappe.show_alert({ message: __('Permiso creado.'), indicator: 'blue' });
+                loadWeek();
+            },
+        });
+    });
+
+    // "Cancelar Permiso" button (only if leave exists)
+    if (hasLeave) {
+        const $btnCancelLeave = $(`<button class="btn btn-outline-danger btn-sm" style="margin-right:8px;">
+            ${__('Cancelar Permiso')}
+        </button>`);
+        $footer.find('.btn-primary').before($btnCancelLeave);
+        $btnCancelLeave.on('click', () => {
+            frappe.confirm(__('¿Desea cancelar el permiso existente?'), () => {
+                frappe.call({
+                    method: `${API}.cancel_leave`,
+                    args: { leave_name: currentLeaves[0].name },
+                    freeze: true,
+                    callback: () => {
+                        d.hide();
+                        frappe.show_alert({ message: __('Permiso cancelado.'), indicator: 'red' });
+                        loadWeek();
+                    },
+                });
+            });
+        });
+    }
+
+    // ── Populate shift type options ──
+    frappe.call({
+        method: `${API}.get_shift_types`,
+        callback: ({ message: shifts }) => {
+            const options = [''].concat((shifts || []).map(s => s.name));
+            d.fields_dict.shift_type.df.options = options.join('\n');
+            d.fields_dict.shift_type.refresh();
+            if (hasShift) {
+                d.set_value('shift_type', currentShifts[0].shift_type);
+            }
+        },
+    });
+
+    d.show();
 }

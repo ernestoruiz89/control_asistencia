@@ -85,21 +85,51 @@ def create_shift_type(start_time, end_time):
 
 @frappe.whitelist()
 def assign_shift(employee, shift_type, start_date, end_date=None):
-    """Create a Shift Assignment for an employee."""
+    """Create one Shift Assignment per day so each day can be modified individually."""
     if not end_date:
         end_date = start_date
 
-    doc = frappe.get_doc({
-        "doctype": "Shift Assignment",
-        "employee": employee,
-        "shift_type": shift_type,
-        "start_date": start_date,
-        "end_date": end_date,
-    })
-    doc.insert(ignore_permissions=True)
-    doc.submit()
+    start = datetime.strptime(str(start_date), "%Y-%m-%d").date()
+    end = datetime.strptime(str(end_date), "%Y-%m-%d").date()
+
+    created = []
+    current = start
+    while current <= end:
+        ds = str(current)
+
+        # Cancel any existing submitted assignments that cover this day
+        existing = frappe.get_all(
+            "Shift Assignment",
+            filters={
+                "employee": employee,
+                "start_date": ["<=", ds],
+                "end_date": [">=", ds],
+                "docstatus": 1,
+            },
+            fields=["name"],
+        )
+        for ex in existing:
+            try:
+                old = frappe.get_doc("Shift Assignment", ex.name)
+                old.cancel()
+            except Exception:
+                pass
+
+        doc = frappe.get_doc({
+            "doctype": "Shift Assignment",
+            "employee": employee,
+            "shift_type": shift_type,
+            "start_date": ds,
+            "end_date": ds,
+        })
+        doc.insert(ignore_permissions=True)
+        doc.submit()
+        created.append(doc.name)
+
+        current += timedelta(days=1)
+
     frappe.db.commit()
-    return {"name": doc.name}
+    return {"names": created, "count": len(created)}
 
 
 @frappe.whitelist()
@@ -300,6 +330,7 @@ def get_weekly_panel_data(week_start):
             days.append({
                 "date": ds,
                 "shift": shift_label,
+                "shift_type": shift_name or "",
                 "status": status,
                 "detail": detail
             })
@@ -312,3 +343,83 @@ def get_weekly_panel_data(week_start):
         })
 
     return result
+
+
+@frappe.whitelist()
+def get_day_details(employee, date):
+    """Return shift assignment and leave details for a specific employee+date."""
+    shifts = frappe.get_all(
+        "Shift Assignment",
+        filters={
+            "employee": employee,
+            "start_date": ["<=", date],
+            "end_date": [">=", date],
+            "docstatus": 1,
+        },
+        fields=["name", "shift_type", "start_date", "end_date"],
+    )
+    leaves = frappe.get_all(
+        "Leave Application",
+        filters={
+            "employee": employee,
+            "from_date": ["<=", date],
+            "to_date": [">=", date],
+            "docstatus": 1,
+        },
+        fields=["name", "leave_type", "from_date", "to_date",
+                "half_day", "half_day_date", "description", "status"],
+    )
+    return {"shift_assignments": shifts, "leave_applications": leaves}
+
+
+@frappe.whitelist()
+def remove_shift_assignment(employee, date):
+    """Cancel shift assignment(s) for a specific employee+date."""
+    existing = frappe.get_all(
+        "Shift Assignment",
+        filters={
+            "employee": employee,
+            "start_date": ["<=", date],
+            "end_date": [">=", date],
+            "docstatus": 1,
+        },
+        fields=["name"],
+    )
+    cancelled = []
+    for ex in existing:
+        doc = frappe.get_doc("Shift Assignment", ex.name)
+        doc.cancel()
+        cancelled.append(ex.name)
+    frappe.db.commit()
+    return {"cancelled": cancelled, "count": len(cancelled)}
+
+
+@frappe.whitelist()
+def create_leave(employee, leave_type, from_date, to_date,
+                half_day=0, half_day_date=None, description=None):
+    """Create and submit a Leave Application."""
+    doc = frappe.get_doc({
+        "doctype": "Leave Application",
+        "employee": employee,
+        "leave_type": leave_type,
+        "from_date": from_date,
+        "to_date": to_date,
+        "half_day": int(half_day),
+        "half_day_date": half_day_date if int(half_day) else None,
+        "description": description or "",
+        "status": "Approved",
+        "leave_approver": frappe.session.user,
+    })
+    doc.insert(ignore_permissions=True)
+    doc.submit()
+    frappe.db.commit()
+    return {"name": doc.name}
+
+
+@frappe.whitelist()
+def cancel_leave(leave_name):
+    """Cancel an existing Leave Application."""
+    doc = frappe.get_doc("Leave Application", leave_name)
+    doc.cancel()
+    frappe.db.commit()
+    return {"name": doc.name}
