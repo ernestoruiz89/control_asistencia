@@ -55,8 +55,8 @@ def get_shift_types():
 
 @frappe.whitelist()
 def create_shift_type(start_time, end_time):
-    """Create a new Shift Type with auto-generated name like '8a-5p'."""
-    name = f"{_fmt_hour(start_time)}-{_fmt_hour(end_time)}"
+    """Create a new Shift Type with auto-generated name like '8:00am - 5:00pm'."""
+    name = f"{_fmt_hour_12(start_time)} - {_fmt_hour_12(end_time)}"
 
     if frappe.db.exists("Shift Type", name):
         frappe.throw(_("El turno '{0}' ya existe.").format(name))
