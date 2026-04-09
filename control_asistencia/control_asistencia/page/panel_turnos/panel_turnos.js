@@ -200,13 +200,13 @@ function showAssignShiftDialog() {
     frappe.call({
         method: `${API}.get_shift_types`,
         callback: ({ message: shifts }) => {
-            const options = (shifts || []).map(s => s.name);
+            const options = (shifts || []).map(s => ({ label: s.label || s.name, value: s.name }));
 
             const d = new frappe.ui.Dialog({
                 title: __('Asignar Turno'),
                 fields: [
                     { fieldname: 'employee', label: __('Empleado'), fieldtype: 'Link', options: 'Employee', reqd: 1 },
-                    { fieldname: 'shift_type', label: __('Turno'), fieldtype: 'Select', options: options.join('\n'), reqd: 1 },
+                    { fieldname: 'shift_type', label: __('Turno'), fieldtype: 'Select', options: options, reqd: 1 },
                     { fieldname: 'start_date', label: __('Fecha Inicio'), fieldtype: 'Date', reqd: 1, default: fmtDate(currentWeekStart) },
                     { fieldname: 'end_date',   label: __('Fecha Fin'),    fieldtype: 'Date', reqd: 1,
                         default: fmtDate(new Date(currentWeekStart.getTime() + 6*24*60*60*1000)) },
@@ -449,8 +449,11 @@ function _buildDayDialog(employee, employeeName, date, details) {
     frappe.call({
         method: `${API}.get_shift_types`,
         callback: ({ message: shifts }) => {
-            const options = [''].concat((shifts || []).map(s => s.name));
-            d.fields_dict.shift_type.df.options = options.join('\n');
+            const options = [{ label: '', value: '' }].concat((shifts || []).map(s => ({
+                label: s.label || s.name,
+                value: s.name
+            })));
+            d.fields_dict.shift_type.df.options = options;
             d.fields_dict.shift_type.refresh();
             if (hasShift) {
                 d.set_value('shift_type', currentShifts[0].shift_type);

@@ -45,12 +45,18 @@ def _fmt_hour_12(t):
 
 @frappe.whitelist()
 def get_shift_types():
-    """Return all Shift Type records."""
-    return frappe.get_all(
+    """Return all Shift Type records with a UI-friendly label."""
+    shifts = frappe.get_all(
         "Shift Type",
         fields=["name", "start_time", "end_time"],
         order_by="start_time ASC",
     )
+    for s in shifts:
+        if s.start_time is not None and s.end_time is not None:
+            s.label = f"{_fmt_hour_12(s.start_time)} - {_fmt_hour_12(s.end_time)}"
+        else:
+            s.label = s.name
+    return shifts
 
 
 @frappe.whitelist()
