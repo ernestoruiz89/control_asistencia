@@ -67,7 +67,7 @@ function fmtShort(d) {
 function renderLegend() {
     const colors = {
         on_time: '#d4edda', out_of_schedule: '#ffe8cc',
-        absent: '#f8d7da', leave: '#e2e3e5',
+        absent: '#f8d7da', leave: '#cce5ff',
         not_scheduled: '#ffffff', future: '#ffffff',
     };
     let html = '';

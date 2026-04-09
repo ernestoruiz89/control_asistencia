@@ -82,7 +82,7 @@
 .cell-on_time       { background: #d4edda !important; color: #155724; }
 .cell-out_of_schedule { background: #ffe8cc !important; color: #7a4100; }
 .cell-absent        { background: #f8d7da !important; color: #721c24; }
-.cell-leave         { background: #e2e3e5 !important; color: #383d41; }
+.cell-leave         { background: #cce5ff !important; color: #004085; }
 .cell-not_scheduled { background: #ffffff !important; color: #999;    }
 .cell-future        { background: #ffffff !important; color: #bbb;    }
 
