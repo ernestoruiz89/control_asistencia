@@ -9,7 +9,7 @@ const STATUS_LABELS = {
     on_time:         'En tiempo',
     out_of_schedule: 'Fuera de horario',
     absent:          'Ausente',
-    leave:           'Vacaciones',
+    leave:           'Vacaciones/Permiso',
     not_scheduled:   'No programado',
     future:          'Día futuro',
 };
