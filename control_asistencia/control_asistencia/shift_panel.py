@@ -414,7 +414,14 @@ def remove_shift_assignment(employee, date):
 @frappe.whitelist()
 def create_leave(employee, leave_type, from_date, to_date,
                 half_day=0, half_day_date=None, description=None):
-    """Create and submit a Leave Application."""
+    """Create and submit a Leave Application.
+
+    Automatically creates a Leave Allocation if none exists for the
+    employee + leave_type covering the requested period.
+    """
+    # Ensure a Leave Allocation exists for this period
+    _ensure_leave_allocation(employee, leave_type, from_date, to_date)
+
     doc = frappe.get_doc({
         "doctype": "Leave Application",
         "employee": employee,
@@ -431,6 +438,37 @@ def create_leave(employee, leave_type, from_date, to_date,
     doc.submit()
     frappe.db.commit()
     return {"name": doc.name}
+
+
+def _ensure_leave_allocation(employee, leave_type, from_date, to_date):
+    """Create a Leave Allocation if none covers the requested dates."""
+    existing = frappe.get_all(
+        "Leave Allocation",
+        filters={
+            "employee": employee,
+            "leave_type": leave_type,
+            "from_date": ["<=", from_date],
+            "to_date": [">=", to_date],
+            "docstatus": 1,
+        },
+        limit=1,
+    )
+    if existing:
+        return
+
+    # Build an allocation for the full year containing from_date
+    year = datetime.strptime(str(from_date), "%Y-%m-%d").year
+    alloc = frappe.get_doc({
+        "doctype": "Leave Allocation",
+        "employee": employee,
+        "leave_type": leave_type,
+        "from_date": f"{year}-01-01",
+        "to_date": f"{year}-12-31",
+        "new_leaves_allocated": 30,
+    })
+    alloc.insert(ignore_permissions=True)
+    alloc.submit()
+    frappe.db.commit()
 
 
 @frappe.whitelist()
