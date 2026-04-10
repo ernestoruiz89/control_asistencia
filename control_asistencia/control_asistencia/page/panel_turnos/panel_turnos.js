@@ -119,9 +119,16 @@ function renderLegend() {
     };
     let html = '';
     for (const [key, label] of Object.entries(STATUS_LABELS)) {
+        if (key === 'future') continue; // Omitir, se combina con el anterior
+        
+        let finalLabel = label;
+        if (key === 'not_scheduled') {
+            finalLabel = 'No programado / Día futuro';
+        }
+
         html += `<span style="display: inline-flex; align-items: center; gap: 6px; margin-right: 15px;">
                     <span class="legend-dot" style="background:${colors[key]}; width: 12px; height: 12px; border: 1px solid #d1d8dd; border-radius: 2px; display: inline-block;"></span>
-                    <span>${label}</span>
+                    <span>${finalLabel}</span>
                  </span>`;
     }
     document.getElementById('shift-legend').innerHTML = html;
