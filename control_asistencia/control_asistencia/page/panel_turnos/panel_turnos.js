@@ -62,7 +62,7 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                     <div style="flex: 1;"></div>
 
                     <button class="btn btn-primary btn-sm" id="btn-create-shift">
-                        <i class="fa fa-plus"></i> <i class="fa fa-clock-o"></i> ${__('Crear Turno')}
+                        <i class="fa fa-clock-o"></i> ${__('Crear Turno')}
                     </button>
                     <button class="btn btn-success btn-sm" id="btn-assign-shift">
                         <i class="fa fa-calendar-check-o"></i> ${__('Asignar Turno')}
