@@ -671,6 +671,10 @@ function showEditEmployeeDialog(employeeName) {
                     </div>
                 `);
             }
+            dialog.add_custom_action('Ver Registro Completo', () => {
+                frappe.set_route('Form', 'Employee', employeeName);
+                dialog.hide();
+            });
             
             dialog.show();
         }
