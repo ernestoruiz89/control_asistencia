@@ -561,7 +561,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
         });
     } else {
         const $btnCancelLeave = $(`<button class="btn btn-outline-danger btn-sm" style="margin-right:8px;">
-            <i class="fa fa-times"></i> ${__('Cancelar estas Vacaciones')}
+            <i class="fa fa-times"></i> ${__('Cancelar Permiso')}
         </button>`);
         $footer.find('.btn-primary').before($btnCancelLeave);
         $btnCancelLeave.on('click', () => {
