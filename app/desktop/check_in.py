@@ -47,7 +47,7 @@ def get_mac_address():
 class AttendanceApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Terminal wbapps")
+        self.root.title("Asistencia")
         self.root.geometry("400x520")
         self.root.resizable(False, False)
         self.root.configure(bg="#f4f6f9")
