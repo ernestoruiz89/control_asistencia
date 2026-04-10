@@ -31,6 +31,9 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                 <span class="week-label" id="week-label"></span>
                 <button class="btn btn-default btn-sm" id="next-week">Siguiente ▶</button>
                 <div style="flex:1"></div>
+                <select id="branch-filter" class="form-control input-sm" style="max-width: 180px; margin-right: 10px; display: inline-block;">
+                    <option value="">Todas las sucursales</option>
+                </select>
                 <input type="text" id="employee-filter" class="form-control input-sm" placeholder="Buscar empleado..." style="max-width: 200px;">
                 <button class="btn btn-primary btn-sm" id="btn-create-shift">+ Crear Turno</button>
                 <button class="btn btn-success btn-sm" id="btn-assign-shift">Asignar Turno</button>
@@ -97,6 +100,9 @@ function renderLegend() {
 // ── Events ──────────────────────────────────────────────────────────────────
 
 function bindEvents() {
+    document.getElementById('branch-filter').addEventListener('change', () => {
+        applyFilterAndRender();
+    });
     document.getElementById('employee-filter').addEventListener('input', () => {
         applyFilterAndRender();
     });
@@ -140,10 +146,26 @@ function loadWeek() {
         args: { week_start: ws },
         callback: ({ message }) => {
             weeklyData = message || [];
+            updateBranchFilter(weeklyData);
             applyFilterAndRender();
         },
         error: () => frappe.msgprint(__('Error al cargar los datos del panel.')),
     });
+}
+
+function updateBranchFilter(data) {
+    const branchSelect = document.getElementById('branch-filter');
+    if (!branchSelect) return;
+    const prevVal = branchSelect.value;
+    const branches = new Set();
+    data.forEach(emp => { if (emp.branch) branches.add(emp.branch); });
+    
+    let html = '<option value="">Todas las sucursales</option>';
+    Array.from(branches).sort().forEach(b => {
+        html += `<option value="${b}">${b}</option>`;
+    });
+    branchSelect.innerHTML = html;
+    branchSelect.value = prevVal || '';
 }
 
 let shiftTimeouts = [];
@@ -174,11 +196,18 @@ function scheduleTimeouts(data) {
 
 function applyFilterAndRender() {
     const filterText = (document.getElementById('employee-filter').value || '').toLowerCase();
+    const branchVal = document.getElementById('branch-filter').value;
     let data = weeklyData;
+
+    if (branchVal) {
+        data = data.filter(emp => emp.branch === branchVal);
+    }
+    
     if (filterText) {
-        data = weeklyData.filter(emp => 
+        data = data.filter(emp => 
             emp.employee_name.toLowerCase().includes(filterText) || 
-            emp.employee.toLowerCase().includes(filterText)
+            emp.employee.toLowerCase().includes(filterText) ||
+            (emp.custom_identificacion && emp.custom_identificacion.toLowerCase().includes(filterText))
         );
     }
     renderGrid(data);
@@ -199,7 +228,13 @@ function renderGrid(data) {
         rows = `<tr><td colspan="8" style="padding:20px;color:#999;">No hay turnos asignados en esta semana.</td></tr>`;
     }
     for (const emp of data) {
-        let cells = `<td class="cell-employee" title="${emp.employee}">${emp.employee_name}</td>`;
+        let cells = `<td class="cell-employee" title="${emp.employee}">
+            <div style="font-weight: 500;">${emp.employee_name}</div>
+            <div style="font-size: 0.85em; color: #7f8c8d; margin-top: 3px; line-height: 1.4;">
+                <i class="fa fa-id-card-o"></i> ${emp.custom_identificacion || '—'}<br>
+                <i class="fa fa-building-o"></i> ${emp.branch || 'Sin sucursal'}
+            </div>
+        </td>`;
         for (const day of emp.days) {
             const cls = 'cell-' + day.status;
             const label = day.shift || '—';
@@ -525,10 +560,8 @@ function showAddEmployeeDialog() {
             { fieldname: 'gender', fieldtype: 'Select', label: __('Género'), options: '\nMale\nFemale\nOther', reqd: 1 },
             { fieldtype: 'Section Break' },
             { fieldname: 'date_of_joining', fieldtype: 'Date', label: __('Fecha de Ingreso'), reqd: 1, default: frappe.datetime.get_today() },
-            { fieldname: 'company', fieldtype: 'Link', options: 'Company', label: __('Compañía'), reqd: 1, default: frappe.defaults.get_user_default('Company') },
             { fieldtype: 'Column Break' },
-            { fieldname: 'department', fieldtype: 'Link', options: 'Department', label: __('Departamento') },
-            { fieldname: 'designation', fieldtype: 'Link', options: 'Designation', label: __('Cargo/Puesto') }
+            { fieldname: 'branch', fieldtype: 'Link', options: 'Branch', label: __('Sucursal (Branch)') }
         ],
         primary_action_label: __('Guardar Empleado'),
         primary_action: function(values) {

@@ -167,7 +167,7 @@ def get_weekly_panel_data(week_start):
     all_employees = frappe.get_all(
         "Employee",
         filters={"status": "Active"},
-        fields=["name", "employee_name"],
+        fields=["name", "employee_name", "custom_identificacion", "branch"],
         order_by="employee_name ASC",
     )
 
@@ -177,6 +177,8 @@ def get_weekly_panel_data(week_start):
         emp_map[emp.name] = {
             "employee": emp.name,
             "employee_name": emp.employee_name,
+            "custom_identificacion": emp.custom_identificacion,
+            "branch": emp.branch,
             "shifts": {},  # date_str -> shift_type
         }
 
@@ -358,6 +360,8 @@ def get_weekly_panel_data(week_start):
         result.append({
             "employee": eid,
             "employee_name": info["employee_name"],
+            "custom_identificacion": info.get("custom_identificacion") or "",
+            "branch": info.get("branch") or "",
             "days": days,
         })
 
