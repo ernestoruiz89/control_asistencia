@@ -1,7 +1,7 @@
 {
  "charts": [],
  "content": "[{\"id\":\"header1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Control de Asistencia</span>\",\"col\":12}},{\"id\":\"card1\",\"type\":\"card\",\"data\":{\"card_name\":\"Enlaces\",\"col\":4}}]",
- "creation": "2026-04-10 08:30:00.000000",
+ "creation": "2026-04-10 08:30:00",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -11,14 +11,13 @@
  "idx": 0,
  "indicator_color": "green",
  "is_hidden": 0,
- "is_standard": 1,
  "label": "Control de Asistencia",
  "links": [
   {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Enlaces",
-   "link_count": 3,
+   "link_count": 0,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -36,7 +35,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Asignación de Turnos",
+   "label": "Asignaci\u00f3n de Turnos",
    "link_count": 0,
    "link_to": "Shift Assignment",
    "link_type": "DocType",
@@ -54,8 +53,8 @@
    "type": "Link"
   }
  ],
- "modified": "2026-04-10 08:30:00.000000",
- "modified_by": "Administrator",
+ "modified": "2026-04-10 08:45:39.518708",
+ "modified_by": "eruiz@findenicaragua.com",
  "module": "Control Asistencia",
  "name": "Control de Asistencia",
  "number_cards": [],
@@ -71,6 +70,7 @@
    "role": "System Manager"
   }
  ],
+ "sequence_id": 0.0,
  "shortcuts": [],
  "title": "Control de Asistencia"
 }
