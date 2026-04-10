@@ -34,6 +34,7 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                 <input type="text" id="employee-filter" class="form-control input-sm" placeholder="Buscar empleado..." style="max-width: 200px;">
                 <button class="btn btn-primary btn-sm" id="btn-create-shift">+ Crear Turno</button>
                 <button class="btn btn-success btn-sm" id="btn-assign-shift">Asignar Turno</button>
+                <button class="btn btn-secondary btn-sm" id="btn-add-employee">+ Agregar Empleado</button>
             </div>
             <div class="shift-legend" id="shift-legend"></div>
             <div id="grid-wrapper" style="max-height: 70vh; overflow: auto; border: 1px solid var(--border-color, #d1d8dd);"></div>
@@ -109,6 +110,9 @@ function bindEvents() {
     });
     document.getElementById('btn-create-shift').addEventListener('click', showCreateShiftDialog);
     document.getElementById('btn-assign-shift').addEventListener('click', showAssignShiftDialog);
+    document.getElementById('btn-add-employee').addEventListener('click', () => {
+        frappe.new_doc('Employee');
+    });
 
     // Click on any day cell to edit
     document.getElementById('grid-wrapper').addEventListener('click', (e) => {
