@@ -421,15 +421,15 @@ function _buildDayDialog(employee, employeeName, date, details) {
         const lastOut = [...checkins].reverse().find(c => resolveAction(c) === 'clock-out');
 
         leftHtml += `<div class="alert alert-success" style="padding:10px 12px;margin-bottom:15px;font-size:13px;border-left:4px solid #2ecc71;">
-            <strong style="color:#27ae60;">${__('Registros Automáticos')}</strong><br>
+            <strong style="color:#27ae60;">${__('Registros')}</strong><br>
             <div style="margin-top: 5px;">
-                <span>${__('Primer entrada:')} <strong>${firstIn ? fmtTime(firstIn.time) : '—'}</strong></span> &nbsp;|&nbsp; 
-                <span>${__('Última salida:')} <strong>${lastOut ? fmtTime(lastOut.time) : '—'}</strong></span>
+                <span>${__('Entrada:')} <strong>${firstIn ? fmtTime(firstIn.time) : '—'}</strong></span> &nbsp;|&nbsp; 
+                <span>${__('Salida:')} <strong>${lastOut ? fmtTime(lastOut.time) : '—'}</strong></span>
             </div>
             <table style="width:100%;margin-top:10px;font-size:12px;border-collapse:collapse;background:white;border-radius:4px;overflow:hidden;">
                 <tr style="background:#e8f8f5; border-bottom:1px solid rgba(0,0,0,0.05);">
                     <th style="text-align:left;padding:4px 6px;">${__('Hora')}</th>
-                    <th style="text-align:left;padding:4px 6px;">${__('Lógica')}</th>
+                    <th style="text-align:left;padding:4px 6px;">${__('Tipo')}</th>
                 </tr>`;
         for (const c of checkins) {
             const action = resolveAction(c);
