@@ -40,10 +40,11 @@
 
 /* ── Grid / Table ── */
 .shift-grid {
-    width: 100%;
-    min-width: 900px;
-    border-collapse: collapse;
-    table-layout: fixed;
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
     font-size: 13px;
 }
 .shift-grid tbody tr {
@@ -54,6 +55,7 @@
     padding: 6px 8px;
     text-align: center;
     vertical-align: middle;
+    min-width: 100px;
 }
 .shift-grid th {
     background: var(--subtle-fg, #f7f7f7);
