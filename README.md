@@ -2,6 +2,17 @@
 
 Control de asistencia de empleados
 
+### Key Features
+
+#### 📅 Panel de Turnos (Shift Panel)
+Centro de control visual avanzado para la gestión de horarios y asistencia:
+- **Vistas Flexibles:** Alterna entre vista semanal y mensual según la necesidad de planificación.
+- **Modo Pantalla Completa:** Botón de expansión para una visualización inmersiva y maximizada de la cuadrícula.
+- **Diseño Adaptable (Temas):** Soporte completo para Modo Oscuro y Claro utilizando variables nativas de Frappe.
+- **Navegación Fluida:** Cuadrícula con scroll horizontal y nombres de empleados fijos (columnas pegajosas) para facilitar la lectura.
+- **Real-Time:** Actualización automática del estado de asistencia mediante WebSockets.
+- **Acceso Rápido:** Botones optimizados para Crear Turnos, Asignar Horarios y dar de alta Nuevos Empleados directamente desde la interfaz.
+
 ### Installation
 
 You can install this app using the [bench](https://github.com/frappe/bench) CLI:
