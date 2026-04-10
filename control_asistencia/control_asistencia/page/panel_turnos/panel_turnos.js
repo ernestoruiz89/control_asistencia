@@ -34,6 +34,13 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                 <select id="branch-filter" class="form-control input-sm" style="max-width: 180px; margin-right: 10px; display: inline-block;">
                     <option value="">Todas las sucursales</option>
                 </select>
+                <select id="status-filter" class="form-control input-sm" style="max-width: 150px; margin-right: 10px; display: inline-block;">
+                    <option value="All">Todos los estados</option>
+                    <option value="Active" selected>Activos</option>
+                    <option value="Inactive">Inactivos</option>
+                    <option value="Suspended">Suspendidos</option>
+                    <option value="Left">Egresados (Left)</option>
+                </select>
                 <input type="text" id="employee-filter" class="form-control input-sm" placeholder="Buscar empleado..." style="max-width: 200px;">
                 <button class="btn btn-primary btn-sm" id="btn-create-shift">+ Crear Turno</button>
                 <button class="btn btn-success btn-sm" id="btn-assign-shift">Asignar Turno</button>
@@ -100,12 +107,10 @@ function renderLegend() {
 // ── Events ──────────────────────────────────────────────────────────────────
 
 function bindEvents() {
-    document.getElementById('branch-filter').addEventListener('change', () => {
-        applyFilterAndRender();
-    });
-    document.getElementById('employee-filter').addEventListener('input', () => {
-        applyFilterAndRender();
-    });
+    document.getElementById('branch-filter').addEventListener('change', () => applyFilterAndRender());
+    document.getElementById('status-filter').addEventListener('change', () => applyFilterAndRender());
+    document.getElementById('employee-filter').addEventListener('input', () => applyFilterAndRender());
+    
     document.getElementById('prev-week').addEventListener('click', () => {
         currentWeekStart.setDate(currentWeekStart.getDate() - 7);
         loadWeek();
@@ -203,12 +208,18 @@ function scheduleTimeouts(data) {
 function applyFilterAndRender() {
     const filterText = (document.getElementById('employee-filter').value || '').toLowerCase();
     const branchVal = document.getElementById('branch-filter').value;
+    const statusVal = document.getElementById('status-filter').value;
+
     let data = weeklyData;
 
     if (branchVal) {
         data = data.filter(emp => emp.branch === branchVal);
     }
     
+    if (statusVal && statusVal !== 'All') {
+        data = data.filter(emp => emp.status === statusVal);
+    }
+
     if (filterText) {
         data = data.filter(emp => 
             emp.employee_name.toLowerCase().includes(filterText) || 
@@ -236,7 +247,12 @@ function renderGrid(data) {
     for (const emp of data) {
         let statusTag = '';
         if (emp.status && emp.status !== 'Active') {
-            const label = emp.status === 'Inactive' ? __('Inactivo') : __('Suspendido');
+            let labelMapping = {
+                'Inactive': __('Inactivo'),
+                'Suspended': __('Suspendido'),
+                'Left': __('Salida')
+            };
+            const label = labelMapping[emp.status] || emp.status;
             statusTag = ` <small style="color: #e74c3c; font-weight: normal;">(${label})</small>`;
         }
         let cells = `<td class="cell-employee" data-employee-id="${emp.employee}" title="Clic para editar empleado" style="cursor: pointer;" onmouseover="this.style.backgroundColor='#f0f4f8'" onmouseout="this.style.backgroundColor=''">
