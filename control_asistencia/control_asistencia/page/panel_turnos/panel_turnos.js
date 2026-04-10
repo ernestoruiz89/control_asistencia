@@ -388,9 +388,8 @@ function _buildDayDialog(employee, employeeName, date, details) {
     leftHtml += `<h5 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:8px; margin-bottom: 12px; color: #2c3e50;"><i class="fa fa-clock-o"></i> ${__('Turno y Asistencia')}</h5>`;
 
     if (hasShift) {
-        leftHtml += `<div class="alert alert-info" style="padding:10px 12px;margin-bottom:15px;font-size:13px;border-left:4px solid #3498db;">
+        leftHtml += `<div class="alert alert-info" style="padding:10px 12px;margin-bottom:15px;font-size:13px;background-color:#eaf2f8;border:none;">
             <strong style="color: #2980b9;">${__('Turno asignado:')}</strong> ${currentShifts[0].shift_type}
-            <br><small class="text-muted">${currentShifts[0].name}</small>
         </div>`;
     } else {
         leftHtml += `<div class="text-muted" style="margin-bottom:15px;font-size:13px;font-style:italic;">${__('Este empleado no tiene turno configurado hoy.')}</div>`;
@@ -457,10 +456,9 @@ function _buildDayDialog(employee, employeeName, date, details) {
 
     if (hasLeave) {
         const lv = currentLeaves[0];
-        rightHtml += `<div class="alert alert-warning" style="padding:10px 12px;margin-bottom:15px;font-size:13px;border-left:4px solid #f39c12;">
+        rightHtml += `<div class="alert alert-warning" style="padding:10px 12px;margin-bottom:15px;font-size:13px;background-color:#fef5e7;border:none;">
             <strong style="color: #d35400;">${__('Permiso Activo:')}</strong> ${lv.leave_type}${lv.half_day ? ' (' + __('Medio día') + ')' : ''}
             ${lv.description ? '<div style="margin-top: 5px;">' + __('Motivo:') + ' <i>' + lv.description + '</i></div>' : ''}
-            <div style="margin-top: 5px; font-size: 11px;" class="text-muted">ID: ${lv.name}</div>
         </div>
         <div class="text-muted" style="font-size: 13px;">${__('Ya existe un permiso asignado en esta fecha. Si deseas programar unas nuevas vacaciones, primero deberás cancelar este permiso.')}</div>`;
         rightHtml += '</div>';
