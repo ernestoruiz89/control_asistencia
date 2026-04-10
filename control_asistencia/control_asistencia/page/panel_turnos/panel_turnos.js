@@ -26,42 +26,40 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
 
     $(page.body).html(`
         <div class="shift-panel-container">
-            <div class="shift-panel-toolbar" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
+            <div class="shift-panel-toolbar" style="width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
                 <!-- Fila 1: Navegador de Semanas + Leyenda -->
-                <div style="display: flex; align-items: center; background: #fdfdfd; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
-                    <button class="btn btn-default btn-xs" id="prev-week" style="box-shadow: none;">◀ Anterior</button>
-                    <span class="week-label" id="week-label" style="font-weight: 600; font-size: 1.1em; margin: 0 15px; color: #4a5568;"></span>
-                    <button class="btn btn-default btn-xs" id="next-week" style="box-shadow: none;">Siguiente ▶</button>
+                <div style="display: flex; align-items: center; background: #fdfdfd; padding: 6px 10px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                    <button class="btn btn-default btn-xs" id="prev-week">◀</button>
+                    <span class="week-label" id="week-label" style="font-weight: 600; margin: 0 12px; color: #4a5568; font-size: 13px;"></span>
+                    <button class="btn btn-default btn-xs" id="next-week">▶</button>
                     
                     <div style="flex:1"></div>
                     
-                    <div id="shift-legend" style="display: flex; gap: 12px; align-items: center; margin-right: 5px;"></div>
+                    <div id="shift-legend" style="display: flex; gap: 10px; align-items: center;"></div>
                 </div>
                 
-                <!-- Fila 2: Filtros y Acciones -->
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <select id="branch-filter" class="form-control input-sm" style="max-width: 170px;">
-                        <option value="">Todas las sucursales</option>
+                <!-- Fila 2: Filtros + Botones Accionadores -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <select id="branch-filter" class="form-control input-sm" style="width: 160px; height: 30px;">
+                        <option value="">Sucursal: Todas</option>
                     </select>
-                    <select id="status-filter" class="form-control input-sm" style="max-width: 140px;">
-                        <option value="All">Todos los estados</option>
+                    <select id="status-filter" class="form-control input-sm" style="width: 140px; height: 30px;">
+                        <option value="All">Estado: Todos</option>
                         <option value="Active" selected>Activos</option>
                         <option value="Inactive">Inactivos</option>
                         <option value="Suspended">Suspendidos</option>
-                        <option value="Left">Egresados (Left)</option>
+                        <option value="Left">Egresados</option>
                     </select>
-                    <div style="position: relative; max-width: 200px;">
-                        <i class="fa fa-search" style="position: absolute; left: 10px; top: 9px; color: #a0aec0;"></i>
-                        <input type="text" id="employee-filter" class="form-control input-sm" placeholder="Buscar empleado..." style="padding-left: 30px;">
+                    <div style="position: relative; width: 180px;">
+                        <i class="fa fa-search" style="position: absolute; left: 8px; top: 8px; color: #cbd5e0; font-size: 12px;"></i>
+                        <input type="text" id="employee-filter" class="form-control input-sm" placeholder="Buscar..." style="padding-left: 25px; height: 30px;">
                     </div>
 
                     <div style="flex:1"></div>
 
-                    <div class="btn-group">
-                        <button class="btn btn-primary btn-sm" id="btn-create-shift" title="Tipo de turno">+ Tipo</button>
-                        <button class="btn btn-success btn-sm" id="btn-assign-shift" title="Asignar turnos masivamente">Asignar</button>
-                        <button class="btn btn-secondary btn-sm" id="btn-add-employee" title="Agregar nuevo empleado">+ Empleado</button>
-                    </div>
+                    <button class="btn btn-primary btn-xs" id="btn-create-shift" style="white-space:nowrap;">+ Tipo</button>
+                    <button class="btn btn-success btn-xs" id="btn-assign-shift" style="white-space:nowrap;">Asignar</button>
+                    <button class="btn btn-secondary btn-xs" id="btn-add-employee" style="white-space:nowrap;">+ Empleado</button>
                 </div>
             </div>
             <div id="grid-wrapper" style="max-height: 70vh; overflow: auto; border: 1px solid var(--border-color, #d1d8dd);"></div>
