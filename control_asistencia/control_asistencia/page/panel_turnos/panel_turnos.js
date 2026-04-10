@@ -111,7 +111,7 @@ function bindEvents() {
     document.getElementById('btn-create-shift').addEventListener('click', showCreateShiftDialog);
     document.getElementById('btn-assign-shift').addEventListener('click', showAssignShiftDialog);
     document.getElementById('btn-add-employee').addEventListener('click', () => {
-        frappe.new_doc('Employee');
+        showAddEmployeeDialog();
     });
 
     // Click on any day cell to edit
@@ -509,4 +509,45 @@ function _buildDayDialog(employee, employeeName, date, details) {
     });
 
     d.show();
+
+}
+
+function showAddEmployeeDialog() {
+    const dialog = new frappe.ui.Dialog({
+        title: __('Agregar Empleado'),
+        fields: [
+            { fieldname: 'first_name', fieldtype: 'Data', label: __('Primer Nombre'), reqd: 1 },
+            { fieldname: 'middle_name', fieldtype: 'Data', label: __('Segundo Nombre') },
+            { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos'), reqd: 1 },
+            { fieldtype: 'Column Break' },
+            { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación') },
+            { fieldname: 'gender', fieldtype: 'Select', label: __('Género'), options: '\nMale\nFemale\nOther' },
+            { fieldtype: 'Section Break' },
+            { fieldname: 'date_of_joining', fieldtype: 'Date', label: __('Fecha de Ingreso'), reqd: 1, default: frappe.datetime.get_today() },
+            { fieldname: 'company', fieldtype: 'Link', options: 'Company', label: __('Compañía'), reqd: 1, default: frappe.defaults.get_user_default('Company') },
+            { fieldtype: 'Column Break' },
+            { fieldname: 'department', fieldtype: 'Link', options: 'Department', label: __('Departamento') },
+            { fieldname: 'designation', fieldtype: 'Link', options: 'Designation', label: __('Cargo/Puesto') }
+        ],
+        primary_action_label: __('Guardar Empleado'),
+        primary_action: function(values) {
+            frappe.call({
+                method: 'frappe.client.insert',
+                args: {
+                    doc: Object.assign(values, { doctype: 'Employee', status: 'Active' })
+                },
+                freeze: true,
+                freeze_message: __('Creando empleado...'),
+                callback: function(r) {
+                    if (!r.exc) {
+                        frappe.show_alert({ message: __('Empleado creado exitosamente.'), indicator: 'green' });
+                        dialog.hide();
+                        loadWeek(); // Refresh grid to show new employee
+                    }
+                }
+            });
+        }
+    });
+
+    dialog.show();
 }
