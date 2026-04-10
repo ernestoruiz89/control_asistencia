@@ -167,6 +167,7 @@ doc_events = {
 	},
 	"Employee": {
 		"on_update": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"on_trash": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
 		"after_insert": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update"
 	}
 }
