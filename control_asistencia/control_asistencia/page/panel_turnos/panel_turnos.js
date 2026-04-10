@@ -28,9 +28,9 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
         <div class="shift-panel-container">
             <div class="shift-panel-toolbar" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;">
                 <!-- Fila 1: Navegador de Semanas -->
-                <div style="display: flex; align-items: center; justify-content: center; background: #fdfdfd; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
+                <div style="display: flex; align-items: center; justify-content: flex-start; background: #fdfdfd; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
                     <button class="btn btn-default btn-sm" id="prev-week" style="box-shadow: none;">◀ Anterior</button>
-                    <span class="week-label" id="week-label" style="font-weight: 600; font-size: 1.15em; margin: 0 25px; min-width: 300px; text-align: center; color: #4a5568;"></span>
+                    <span class="week-label" id="week-label" style="font-weight: 600; font-size: 1.15em; margin: 0 15px; color: #4a5568;"></span>
                     <button class="btn btn-default btn-sm" id="next-week" style="box-shadow: none;">Siguiente ▶</button>
                 </div>
                 
