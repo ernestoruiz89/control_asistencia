@@ -14,7 +14,8 @@ const STATUS_LABELS = {
     future:          'Día futuro',
 };
 
-let currentWeekStart = getMonday(new Date());
+let currentStartDate = getMonday(new Date());
+let currentViewType = 'week';
 let weeklyData = [];
 
 frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
@@ -28,11 +29,15 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
         <div class="shift-panel-container">
             <div class="shift-panel-toolbar" style="width: 100%; display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
                 <!-- Fila 1: Semana y Leyenda -->
-                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: nowrap;">
+                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: nowrap;">
+                    <select id="view-type" class="form-control input-sm" style="width: 100px; height: 28px; padding: 2px 5px;">
+                        <option value="week">Semanal</option>
+                        <option value="month">Mensual</option>
+                    </select>
                     <div style="display: flex; align-items: center; background: #fff; border: 1px solid #d1d8dd; border-radius: 4px; padding: 2px;">
-                        <button class="btn btn-default btn-xs" id="prev-week" style="border:none; background:transparent;">◀</button>
-                        <span id="week-label" style="font-weight: 600; margin: 0 10px; min-width: 180px; text-align: center; font-size: 13px;"></span>
-                        <button class="btn btn-default btn-xs" id="next-week" style="border:none; background:transparent;">▶</button>
+                        <button class="btn btn-default btn-xs" id="prev-btn" style="border:none; background:transparent;">◀</button>
+                        <span id="date-label" style="font-weight: 600; margin: 0 10px; min-width: 180px; text-align: center; font-size: 13px;"></span>
+                        <button class="btn btn-default btn-xs" id="next-btn" style="border:none; background:transparent;">▶</button>
                     </div>
                     <div id="shift-legend" style="display: flex; gap: 15px; align-items: center; font-size: 12px; color: #718096;"></div>
                 </div>
@@ -73,11 +78,11 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
 
     renderLegend();
     bindEvents();
-    loadWeek();
+    loadData();
 
     // Escuchar eventos en tiempo real (WebSockets) desde el backend
     frappe.realtime.on('update_shift_panel', () => {
-        loadWeek();
+        loadData();
     });
 };
 
@@ -141,14 +146,34 @@ function bindEvents() {
     document.getElementById('status-filter').addEventListener('change', () => applyFilterAndRender());
     document.getElementById('employee-filter').addEventListener('input', () => applyFilterAndRender());
     
-    document.getElementById('prev-week').addEventListener('click', () => {
-        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-        loadWeek();
+    document.getElementById('view-type').addEventListener('change', (e) => {
+        currentViewType = e.target.value;
+        if (currentViewType === 'month') {
+            currentStartDate = new Date(currentStartDate.getFullYear(), currentStartDate.getMonth(), 1);
+        } else {
+            currentStartDate = getMonday(currentStartDate);
+        }
+        loadData();
     });
-    document.getElementById('next-week').addEventListener('click', () => {
-        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-        loadWeek();
+
+    document.getElementById('prev-btn').addEventListener('click', () => {
+        if (currentViewType === 'week') {
+            currentStartDate.setDate(currentStartDate.getDate() - 7);
+        } else {
+            currentStartDate.setMonth(currentStartDate.getMonth() - 1);
+        }
+        loadData();
     });
+
+    document.getElementById('next-btn').addEventListener('click', () => {
+        if (currentViewType === 'week') {
+            currentStartDate.setDate(currentStartDate.getDate() + 7);
+        } else {
+            currentStartDate.setMonth(currentStartDate.getMonth() + 1);
+        }
+        loadData();
+    });
+    
     document.getElementById('btn-create-shift').addEventListener('click', showCreateShiftDialog);
     document.getElementById('btn-assign-shift').addEventListener('click', showAssignShiftDialog);
     document.getElementById('btn-add-employee').addEventListener('click', () => {
@@ -174,17 +199,30 @@ function bindEvents() {
 
 // ── Load & Render ───────────────────────────────────────────────────────────
 
-function loadWeek() {
-    const ws = fmtDate(currentWeekStart);
-    const we = new Date(currentWeekStart);
-    we.setDate(we.getDate() + 6);
+function loadData() {
+    const ws = fmtDate(currentStartDate);
+    let numDays = 7;
+    let label = "";
 
-    document.getElementById('week-label').textContent =
-        fmtShort(currentWeekStart) + ' – ' + fmtShort(we) + ' ' + currentWeekStart.getFullYear();
+    if (currentViewType === 'week') {
+        const we = new Date(currentStartDate);
+        we.setDate(we.getDate() + 6);
+        label = fmtShort(currentStartDate) + ' – ' + fmtShort(we) + ' ' + currentStartDate.getFullYear();
+        numDays = 7;
+    } else {
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        label = monthNames[currentStartDate.getMonth()] + ' ' + currentStartDate.getFullYear();
+        numDays = new Date(currentStartDate.getFullYear(), currentStartDate.getMonth() + 1, 0).getDate();
+    }
+
+    document.getElementById('date-label').textContent = label;
 
     frappe.call({
         method: `${API}.get_weekly_panel_data`,
-        args: { week_start: ws },
+        args: { 
+            start_date: ws,
+            days: numDays
+        },
         callback: ({ message }) => {
             weeklyData = message || [];
             updateBranchFilter(weeklyData);
@@ -226,7 +264,7 @@ function scheduleTimeouts(data) {
                 const delayMs = triggerTime - now;
                 if (delayMs > 0 && delayMs <= 86400000) { // only if within 24 hours
                     const to = setTimeout(() => {
-                        loadWeek();
+                        loadData();
                     }, delayMs);
                     shiftTimeouts.push(to);
                 }
@@ -262,17 +300,28 @@ function applyFilterAndRender() {
 }
 
 function renderGrid(data) {
-    const ws = new Date(currentWeekStart);
-    let headerCols = '<th class="col-employee">Empleado</th>';
-    for (let i = 0; i < 7; i++) {
+    const ws = new Date(currentStartDate);
+    const numDays = data.length > 0 ? data[0].days.length : (currentViewType === 'week' ? 7 : 31);
+    
+    let headerCols = '<th class="col-employee" style="min-width: 250px;">Empleado</th>';
+    for (let i = 0; i < numDays; i++) {
         const d = new Date(ws);
         d.setDate(d.getDate() + i);
-        headerCols += `<th>${DAY_NAMES[i]}<br><small>${fmtShort(d)}</small></th>`;
+        
+        let displayDay;
+        if (currentViewType === 'week') {
+            displayDay = DAY_NAMES[d.getDay() === 0 ? 6 : d.getDay() - 1];
+        } else {
+            displayDay = d.getDate();
+        }
+        
+        headerCols += `<th style="min-width: 100px;">${displayDay}<br><small>${fmtShort(d)}</small></th>`;
     }
 
     let rows = '';
+    const colspan = numDays + 1;
     if (!data.length) {
-        rows = `<tr><td colspan="8" style="padding:20px;color:#999;">No hay turnos asignados en esta semana.</td></tr>`;
+        rows = `<tr><td colspan="${colspan}" style="padding:20px;color:#999;">No hay datos para mostrar en este rango.</td></tr>`;
     }
     for (const emp of data) {
         let statusTag = '';
@@ -381,7 +430,7 @@ function showAssignShiftDialog() {
                                     ? __('Turno asignado correctamente.')
                                     : __('Se asignaron {0} turnos (uno por día).', [n])
                             );
-                            loadWeek();
+                            loadData();
                         },
                     });
                 },
@@ -545,7 +594,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
                 callback: () => {
                     d.hide();
                     frappe.show_alert({ message: __('Turno asignado en esta sola fecha.'), indicator: 'green' });
-                    loadWeek();
+                    loadData();
                 },
             });
         },
@@ -569,7 +618,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
                     callback: () => {
                         d.hide();
                         frappe.show_alert({ message: __('Turno individual removido con éxito.'), indicator: 'orange' });
-                        loadWeek();
+                        loadData();
                     },
                 });
             });
@@ -604,7 +653,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
                 callback: () => {
                     d.hide();
                     frappe.show_alert({ message: __('Aprobado de forma instantánea.'), indicator: 'blue' });
-                    loadWeek();
+                    loadData();
                 },
             });
         });
@@ -622,7 +671,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
                     callback: () => {
                         d.hide();
                         frappe.show_alert({ message: __('Ausencia anulada. El balance será restituido.'), indicator: 'red' });
-                        loadWeek();
+                        loadData();
                     },
                 });
             });
@@ -678,7 +727,7 @@ function showAddEmployeeDialog() {
                     if (!r.exc) {
                         frappe.show_alert({ message: __('Empleado creado exitosamente.'), indicator: 'green' });
                         dialog.hide();
-                        loadWeek(); // Refresh grid to show new employee
+                        loadData(); // Refresh grid to show new employee
                     }
                 }
             });
@@ -735,7 +784,7 @@ function showEditEmployeeDialog(employeeName) {
                         callback: function() {
                             frappe.show_alert({ message: __('Estado actualizado.'), indicator: 'green' });
                             dialog.hide();
-                            loadWeek(); // Reload grid strictly to reflect status changes indirectly
+                            loadData(); // Reload grid strictly to reflect status changes indirectly
                         }
                     });
                 }

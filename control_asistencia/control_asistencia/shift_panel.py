@@ -151,24 +151,24 @@ def assign_shift(employee, shift_type, start_date, end_date=None, days_enabled=N
 
 
 @frappe.whitelist()
-def get_weekly_panel_data(week_start):
-    """Return panel data for a 7-day week starting on *week_start* (Monday).
-
-    Returns a list of dicts, one per employee, each with a `days` list of 7 items.
+def get_weekly_panel_data(start_date, days=7):
+    """Return panel data for a range starting on *start_date*.
+    *days* can be 7 (week) or 28-31 (month).
     """
     from datetime import date as date_type
 
     from frappe.utils import getdate, nowdate
-    week_start = datetime.strptime(week_start, "%Y-%m-%d").date()
-    week_end = week_start + timedelta(days=6)
+    start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+    days = int(days)
+    end_date = start_date + timedelta(days=days-1)
     today = getdate(nowdate())
 
     # ── 1. Employees with shift assignments in this range ──
     assignments = frappe.get_all(
         "Shift Assignment",
         filters={
-            "start_date": ["<=", str(week_end)],
-            "end_date": [">=", str(week_start)],
+            "start_date": ["<=", str(end_date)],
+            "end_date": [">=", str(start_date)],
             "docstatus": 1,
         },
         fields=["employee", "employee_name", "shift_type", "start_date", "end_date"],
@@ -201,8 +201,8 @@ def get_weekly_panel_data(week_start):
             continue
         s = asgn.start_date
         e = asgn.end_date or asgn.start_date
-        d = max(s, week_start)
-        end = min(e, week_end)
+        d = max(s, start_date)
+        end = min(e, end_date)
         while d <= end:
             emp_map[eid]["shifts"][str(d)] = asgn.shift_type
             d += timedelta(days=1)
@@ -211,9 +211,9 @@ def get_weekly_panel_data(week_start):
     checkins = frappe.get_all(
         "Employee Checkin",
         filters={
-            "time": ["between", [str(week_start), str(week_end) + " 23:59:59"]],
+            "time": ["between", [str(start_date), str(end_date) + " 23:59:59"]],
         },
-        fields=["employee", "time", "custom_registration_type"],
+        fields=["employee", "time", "log_type"],
         order_by="time ASC",
     )
 
@@ -221,29 +221,30 @@ def get_weekly_panel_data(week_start):
     checkin_map = {}  # emp -> date_str -> list of {time, action}
     for c in checkins:
         eid = c.employee
-        d = c.time.date() if isinstance(c.time, datetime) else c.time
-        ds = str(d)
+        ds = str(c.time.date())
         checkin_map.setdefault(eid, {}).setdefault(ds, []).append({
             "time": c.time,
-            "action": (c.custom_registration_type or "").lower(),
+            "action": "clock-in" if c.log_type=="IN" else "clock-out"
         })
 
-    # ── 3. Leave applications (approved) ──
+    # ── 3. Leaves ──
     leaves = frappe.get_all(
         "Leave Application",
         filters={
-            "from_date": ["<=", str(week_end)],
-            "to_date": [">=", str(week_start)],
+            "employee": ["in", list(emp_map.keys()) or [""]],
+            "from_date": ["<=", str(end_date)],
+            "to_date": [">=", str(start_date)],
             "status": "Approved",
+            "docstatus": 1,
         },
-        fields=["employee", "from_date", "to_date", "leave_type", "half_day", "half_day_date"],
+        fields=["employee", "from_date", "to_date", "leave_type", "half_day", "half_day_date"]
     )
 
     leave_map = {}  # emp -> date_str -> dict
     for lv in leaves:
         eid = lv.employee
-        d = max(lv.from_date, week_start)
-        end = min(lv.to_date, week_end)
+        d = max(lv.from_date, start_date)
+        end = min(lv.to_date, end_date)
         while d <= end:
             is_half = bool(lv.half_day) and str(lv.half_day_date) == str(d)
             leave_map.setdefault(eid, {})[str(d)] = {
@@ -263,10 +264,11 @@ def get_weekly_panel_data(week_start):
 
     # ── 5. Build result ──
     result = []
+    num_days = (end_date - start_date).days + 1
     for eid, info in emp_map.items():
         days = []
-        for i in range(7):
-            d = week_start + timedelta(days=i)
+        for i in range(num_days):
+            d = start_date + timedelta(days=i)
             ds = str(d)
             shift_name = info["shifts"].get(ds)
             leave_info = leave_map.get(eid, {}).get(ds)
