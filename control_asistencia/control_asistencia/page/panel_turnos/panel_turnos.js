@@ -559,7 +559,7 @@ function showAddEmployeeDialog() {
         fields: [
             { fieldname: 'first_name', fieldtype: 'Data', label: __('Primer Nombre'), reqd: 1 },
             { fieldname: 'middle_name', fieldtype: 'Data', label: __('Segundo Nombre') },
-            { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos'), reqd: 1 },
+            { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos') },
             { fieldname: 'date_of_birth', fieldtype: 'Date', label: __('Fecha de Nacimiento'), reqd: 1 },
             { fieldtype: 'Column Break' },
             { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación'), reqd: 1 },
