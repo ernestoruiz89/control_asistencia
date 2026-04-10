@@ -482,7 +482,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
         title: `${employeeName} — ${dateDisplay}`,
         fields: dialogFields,
         size: 'large',
-        primary_action_label: __('Asignar Turno Manualmente'),
+        primary_action_label: __('Asignar Turno'),
         primary_action: (values) => {
             if (!values.shift_type) {
                 frappe.msgprint(__('Seleccione un tipo de turno para asignar individualmente a esta celda.'));
@@ -508,7 +508,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
     // "Quitar Turno" button
     if (hasShift) {
         const $btnRemove = $(`<button class="btn btn-danger btn-sm" style="position:absolute;left:15px;">
-            <i class="fa fa-trash"></i> ${__('Borrar Turno Diario')}
+            <i class="fa fa-trash"></i> ${__('Borrar Turno')}
         </button>`);
         $footer.css('position', 'relative').prepend($btnRemove);
         $btnRemove.on('click', () => {
