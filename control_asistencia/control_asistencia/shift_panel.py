@@ -178,8 +178,8 @@ def get_weekly_panel_data(week_start):
     # Also fetch employees with no assignments but who are active
     all_employees = frappe.get_all(
         "Employee",
-        filters={"status": "Active"},
-        fields=["name", "employee_name", "custom_identificacion", "branch"],
+        filters={"status": ["in", ["Active", "Inactive", "Suspended"]]},
+        fields=["name", "employee_name", "custom_identificacion", "branch", "status"],
         order_by="employee_name ASC",
     )
 
@@ -191,6 +191,7 @@ def get_weekly_panel_data(week_start):
             "employee_name": emp.employee_name,
             "custom_identificacion": emp.custom_identificacion,
             "branch": emp.branch,
+            "status": emp.status,
             "shifts": {},  # date_str -> shift_type
         }
 

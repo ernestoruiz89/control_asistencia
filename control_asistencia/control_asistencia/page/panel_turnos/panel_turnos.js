@@ -234,8 +234,13 @@ function renderGrid(data) {
         rows = `<tr><td colspan="8" style="padding:20px;color:#999;">No hay turnos asignados en esta semana.</td></tr>`;
     }
     for (const emp of data) {
+        let statusTag = '';
+        if (emp.status && emp.status !== 'Active') {
+            const label = emp.status === 'Inactive' ? __('Inactivo') : __('Suspendido');
+            statusTag = ` <small style="color: #e74c3c; font-weight: normal;">(${label})</small>`;
+        }
         let cells = `<td class="cell-employee" data-employee-id="${emp.employee}" title="Clic para editar empleado" style="cursor: pointer;" onmouseover="this.style.backgroundColor='#f0f4f8'" onmouseout="this.style.backgroundColor=''">
-            <div style="font-weight: 500; color: #2980b9;">${emp.employee_name}</div>
+            <div style="font-weight: 500; color: #2980b9;">${emp.employee_name}${statusTag}</div>
         </td>`;
         for (const day of emp.days) {
             const cls = 'cell-' + day.status;
