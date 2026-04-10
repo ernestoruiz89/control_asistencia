@@ -171,6 +171,10 @@ def register_checkin(
     automatically appended.
     """
     employee = _get_employee()
+    
+    emp_status = frappe.db.get_value("Employee", employee, "status")
+    if emp_status in ["Inactive", "Suspended", "Left"]:
+        frappe.throw(f"No se permite registrar asistencia. El estado del empleado es: {emp_status}")
 
     saved_mac = frappe.db.get_value("Employee", employee, "attendance_device_id")
     if saved_mac:
