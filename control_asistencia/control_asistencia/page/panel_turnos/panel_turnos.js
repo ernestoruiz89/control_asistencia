@@ -383,38 +383,28 @@ function _buildDayDialog(employee, employeeName, date, details) {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
 
-    // ── Build info HTML ──
-    const checkins = details.checkins || [];
-    let infoHtml = '<div style="margin-bottom:4px;">';
+    // ── Left Column (Shift & Checkins) ──
+    let leftHtml = '<div style="padding-right: 5px;">';
+    leftHtml += `<h5 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:8px; margin-bottom: 12px; color: #2c3e50;"><i class="fa fa-clock-o"></i> ${__('Turno y Asistencia')}</h5>`;
+
     if (hasShift) {
-        infoHtml += `<div class="alert alert-info" style="padding:8px 12px;margin-bottom:6px;font-size:13px;">
-            <strong>${__('Turno actual:')}</strong> ${currentShifts[0].shift_type}
+        leftHtml += `<div class="alert alert-info" style="padding:10px 12px;margin-bottom:15px;font-size:13px;border-left:4px solid #3498db;">
+            <strong style="color: #2980b9;">${__('Turno asignado:')}</strong> ${currentShifts[0].shift_type}
             <br><small class="text-muted">${currentShifts[0].name}</small>
         </div>`;
-    }
-    if (hasLeave) {
-        const lv = currentLeaves[0];
-        infoHtml += `<div class="alert alert-warning" style="padding:8px 12px;margin-bottom:6px;font-size:13px;">
-            <strong>${__('Permiso:')}</strong> ${lv.leave_type}${lv.half_day ? ' (' + __('Medio día') + ')' : ''}
-            ${lv.description ? '<br>' + __('Motivo:') + ' ' + lv.description : ''}
-            <br><small class="text-muted">${lv.name}</small>
-        </div>`;
-    }
-    if (!hasShift && !hasLeave) {
-        infoHtml += `<div class="text-muted" style="margin-bottom:6px;font-size:13px;">${__('Sin turno ni permiso asignado.')}</div>`;
+    } else {
+        leftHtml += `<div class="text-muted" style="margin-bottom:15px;font-size:13px;font-style:italic;">${__('Este empleado no tiene turno configurado hoy.')}</div>`;
     }
 
-    // ── Checkin info ──
+    const checkins = details.checkins || [];
     if (checkins.length) {
         const fmtTime = (t) => {
             const dt = new Date(t);
             return dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', hour12: true });
         };
-        // Resolve action: prefer custom_registration_type, fallback to log_type
         const resolveAction = (c) => {
             const crt = (c.custom_registration_type || '').toLowerCase();
             if (crt) return crt;
-            // Fallback to log_type field (IN/OUT)
             const lt = (c.log_type || '').toUpperCase();
             if (lt === 'IN') return 'clock-in';
             if (lt === 'OUT') return 'clock-out';
@@ -431,47 +421,71 @@ function _buildDayDialog(employee, employeeName, date, details) {
         const firstIn = checkins.find(c => resolveAction(c) === 'clock-in');
         const lastOut = [...checkins].reverse().find(c => resolveAction(c) === 'clock-out');
 
-        let checkinHtml = '<div class="alert alert-success" style="padding:8px 12px;margin-bottom:6px;font-size:13px;">';
-        checkinHtml += `<strong>${__('Registros de asistencia')}</strong><br>`;
-        checkinHtml += `<span>${__('Primer entrada:')} <strong>${firstIn ? fmtTime(firstIn.time) : '—'}</strong></span>`;
-        checkinHtml += ` &nbsp;|&nbsp; `;
-        checkinHtml += `<span>${__('Última salida:')} <strong>${lastOut ? fmtTime(lastOut.time) : '—'}</strong></span>`;
-
-        // Full list
-        checkinHtml += '<table style="width:100%;margin-top:6px;font-size:12px;border-collapse:collapse;">';
-        checkinHtml += `<tr style="border-bottom:1px solid rgba(0,0,0,0.1);"><th style="text-align:left;padding:2px 4px;">${__('Hora')}</th><th style="text-align:left;padding:2px 4px;">${__('Tipo')}</th></tr>`;
+        leftHtml += `<div class="alert alert-success" style="padding:10px 12px;margin-bottom:15px;font-size:13px;border-left:4px solid #2ecc71;">
+            <strong style="color:#27ae60;">${__('Registros Automáticos')}</strong><br>
+            <div style="margin-top: 5px;">
+                <span>${__('Primer entrada:')} <strong>${firstIn ? fmtTime(firstIn.time) : '—'}</strong></span> &nbsp;|&nbsp; 
+                <span>${__('Última salida:')} <strong>${lastOut ? fmtTime(lastOut.time) : '—'}</strong></span>
+            </div>
+            <table style="width:100%;margin-top:10px;font-size:12px;border-collapse:collapse;background:white;border-radius:4px;overflow:hidden;">
+                <tr style="background:#e8f8f5; border-bottom:1px solid rgba(0,0,0,0.05);">
+                    <th style="text-align:left;padding:4px 6px;">${__('Hora')}</th>
+                    <th style="text-align:left;padding:4px 6px;">${__('Lógica')}</th>
+                </tr>`;
         for (const c of checkins) {
             const action = resolveAction(c);
-            checkinHtml += `<tr style="border-bottom:1px solid rgba(0,0,0,0.05);">
-                <td style="padding:2px 4px;">${fmtTime(c.time)}</td>
-                <td style="padding:2px 4px;">${typeLabel(action)}</td>
+            leftHtml += `<tr style="border-bottom:1px solid rgba(0,0,0,0.05);">
+                <td style="padding:4px 6px;">${fmtTime(c.time)}</td>
+                <td style="padding:4px 6px;">${typeLabel(action)}</td>
             </tr>`;
         }
-        checkinHtml += '</table></div>';
-        infoHtml += checkinHtml;
+        leftHtml += '</table></div>';
     } else {
-        infoHtml += `<div class="text-muted" style="margin-bottom:6px;font-size:12px;">${__('Sin registros de asistencia.')}</div>`;
+        leftHtml += `<div class="text-muted" style="margin-bottom:15px;font-size:13px;font-style:italic;">${__('No hay ninguna marcación biométrica hoy.')}</div>`;
     }
+    leftHtml += '</div>';
 
-    infoHtml += '</div>';
+    // ── Right Column (Leaves) ──
+    let rightHtml = '<div style="padding-left: 5px;">';
+    rightHtml += `<h5 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:8px; margin-bottom: 12px; color: #d35400;"><i class="fa fa-plane"></i> ${__('Vacaciones / Permiso')}</h5>`;
+
+    let dialogFields = [
+        { fieldname: 'left_html', fieldtype: 'HTML', options: leftHtml },
+        { fieldname: 'shift_type', label: __('Nuevo Tipo de Turno'), fieldtype: 'Select', options: '' },
+        { fieldtype: 'Column Break' }
+    ];
+
+    if (hasLeave) {
+        const lv = currentLeaves[0];
+        rightHtml += `<div class="alert alert-warning" style="padding:10px 12px;margin-bottom:15px;font-size:13px;border-left:4px solid #f39c12;">
+            <strong style="color: #d35400;">${__('Permiso Activo:')}</strong> ${lv.leave_type}${lv.half_day ? ' (' + __('Medio día') + ')' : ''}
+            ${lv.description ? '<div style="margin-top: 5px;">' + __('Motivo:') + ' <i>' + lv.description + '</i></div>' : ''}
+            <div style="margin-top: 5px; font-size: 11px;" class="text-muted">ID: ${lv.name}</div>
+        </div>
+        <div class="text-muted" style="font-size: 13px;">${__('Ya existe un permiso asignado en esta fecha. Si deseas programar unas nuevas vacaciones, primero deberás cancelar este permiso.')}</div>`;
+        rightHtml += '</div>';
+        
+        dialogFields.push({ fieldname: 'right_html', fieldtype: 'HTML', options: rightHtml });
+    } else {
+        rightHtml += `<div class="text-muted" style="margin-bottom:20px;font-size:13px;">${__('Sin historial de permisos programados para este día. Puedes generar uno usando el formato de abajo:')}</div>`;
+        rightHtml += '</div>';
+        
+        dialogFields.push(
+            { fieldname: 'right_html', fieldtype: 'HTML', options: rightHtml },
+            { fieldname: 'leave_type', label: __('Aplicar Nuevo Permiso'), fieldtype: 'Link', options: 'Leave Type' },
+            { fieldname: 'half_day', label: __('Sólo abarca medio día'), fieldtype: 'Check', default: 0 },
+            { fieldname: 'description', label: __('Sustentación Requerida'), fieldtype: 'Small Text' }
+        );
+    }
 
     const d = new frappe.ui.Dialog({
         title: `${employeeName} — ${dateDisplay}`,
-        fields: [
-            { fieldname: 'info_html', fieldtype: 'HTML', options: infoHtml },
-            { fieldtype: 'Section Break', label: __('Turno') },
-            { fieldname: 'shift_type', label: __('Tipo de Turno'), fieldtype: 'Select', options: '' },
-            { fieldtype: 'Section Break', label: __('Permiso / Vacaciones'), collapsible: 1,
-              collapsible_depends_on: 'eval:false' },
-            { fieldname: 'leave_type', label: __('Tipo de Permiso'), fieldtype: 'Link', options: 'Leave Type' },
-            { fieldname: 'half_day', label: __('Medio Día'), fieldtype: 'Check', default: 0 },
-            { fieldname: 'description', label: __('Descripción'), fieldtype: 'Small Text' },
-        ],
+        fields: dialogFields,
         size: 'large',
-        primary_action_label: __('Asignar Turno'),
+        primary_action_label: __('Asignar Turno Manualmente'),
         primary_action: (values) => {
             if (!values.shift_type) {
-                frappe.msgprint(__('Seleccione un tipo de turno.'));
+                frappe.msgprint(__('Seleccione un tipo de turno para asignar individualmente a esta celda.'));
                 return;
             }
             frappe.call({
@@ -481,7 +495,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
                 freeze_message: __('Asignando turno...'),
                 callback: () => {
                     d.hide();
-                    frappe.show_alert({ message: __('Turno asignado.'), indicator: 'green' });
+                    frappe.show_alert({ message: __('Turno asignado en esta sola fecha.'), indicator: 'green' });
                     loadWeek();
                 },
             });
@@ -491,21 +505,21 @@ function _buildDayDialog(employee, employeeName, date, details) {
     // ── Custom footer buttons ──
     const $footer = d.$wrapper.find('.modal-footer');
 
-    // "Quitar Turno" button (only if shift exists)
+    // "Quitar Turno" button
     if (hasShift) {
         const $btnRemove = $(`<button class="btn btn-danger btn-sm" style="position:absolute;left:15px;">
-            ${__('Quitar Turno')}
+            <i class="fa fa-trash"></i> ${__('Borrar Turno Diario')}
         </button>`);
         $footer.css('position', 'relative').prepend($btnRemove);
         $btnRemove.on('click', () => {
-            frappe.confirm(__('¿Desea quitar el turno de este día?'), () => {
+            frappe.confirm(__('¿Estás seguro que deseas dejar esta celda completamente vacía sin turno?'), () => {
                 frappe.call({
                     method: `${API}.remove_shift_assignment`,
                     args: { employee, date },
                     freeze: true,
                     callback: () => {
                         d.hide();
-                        frappe.show_alert({ message: __('Turno removido.'), indicator: 'orange' });
+                        frappe.show_alert({ message: __('Turno individual removido con éxito.'), indicator: 'orange' });
                         loadWeek();
                     },
                 });
@@ -513,53 +527,52 @@ function _buildDayDialog(employee, employeeName, date, details) {
         });
     }
 
-    // "Crear Permiso" button
-    const $btnLeave = $(`<button class="btn btn-warning btn-sm" style="margin-right:8px;">
-        ${__('Crear Permiso')}
-    </button>`);
-    $footer.find('.btn-primary').before($btnLeave);
-    $btnLeave.on('click', () => {
-        const values = d.get_values(true);
-        if (!values || !values.leave_type) {
-            frappe.msgprint(__('Seleccione un tipo de permiso.'));
-            return;
-        }
-        frappe.call({
-            method: `${API}.create_leave`,
-            args: {
-                employee,
-                leave_type: values.leave_type,
-                from_date: date,
-                to_date: date,
-                half_day: values.half_day ? 1 : 0,
-                half_day_date: values.half_day ? date : null,
-                description: values.description || '',
-            },
-            freeze: true,
-            freeze_message: __('Creando permiso...'),
-            callback: () => {
-                d.hide();
-                frappe.show_alert({ message: __('Permiso creado.'), indicator: 'blue' });
-                loadWeek();
-            },
+    // Contextual button handling based on Leave statys
+    if (!hasLeave) {
+        const $btnLeave = $(`<button class="btn btn-warning btn-sm" style="margin-right:8px;">
+            <i class="fa fa-calendar-plus-o"></i> ${__('Registrar Vacaciones')}
+        </button>`);
+        $footer.find('.btn-primary').before($btnLeave);
+        $btnLeave.on('click', () => {
+            const values = d.get_values(true);
+            if (!values || !values.leave_type) {
+                frappe.msgprint(__('Por favor selecciona a qué banco de vacaciones o tipo de permiso imputar este día.'));
+                return;
+            }
+            frappe.call({
+                method: `${API}.create_leave`,
+                args: {
+                    employee,
+                    leave_type: values.leave_type,
+                    from_date: date,
+                    to_date: date,
+                    half_day: values.half_day ? 1 : 0,
+                    half_day_date: values.half_day ? date : null,
+                    description: values.description || '',
+                },
+                freeze: true,
+                freeze_message: __('Procesando...'),
+                callback: () => {
+                    d.hide();
+                    frappe.show_alert({ message: __('Aprobado de forma instantánea.'), indicator: 'blue' });
+                    loadWeek();
+                },
+            });
         });
-    });
-
-    // "Cancelar Permiso" button (only if leave exists)
-    if (hasLeave) {
+    } else {
         const $btnCancelLeave = $(`<button class="btn btn-outline-danger btn-sm" style="margin-right:8px;">
-            ${__('Cancelar Permiso')}
+            <i class="fa fa-times"></i> ${__('Cancelar estas Vacaciones')}
         </button>`);
         $footer.find('.btn-primary').before($btnCancelLeave);
         $btnCancelLeave.on('click', () => {
-            frappe.confirm(__('¿Desea cancelar el permiso existente?'), () => {
+            frappe.confirm(__('¿Estás seguro de desaprobar esta configuración de vacaciones particular? El día volverá a su normalidad laboral.'), () => {
                 frappe.call({
                     method: `${API}.cancel_leave`,
                     args: { leave_name: currentLeaves[0].name },
                     freeze: true,
                     callback: () => {
                         d.hide();
-                        frappe.show_alert({ message: __('Permiso cancelado.'), indicator: 'red' });
+                        frappe.show_alert({ message: __('Ausencia anulada. El balance será restituido.'), indicator: 'red' });
                         loadWeek();
                     },
                 });
