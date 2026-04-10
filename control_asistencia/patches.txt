@@ -6,6 +6,7 @@
 # Patches added in this section will be executed after doctypes are migrated
 control_asistencia.patches.migrate_tipo_registro_to_english
 control_asistencia.patches.rename_shift_types
-control_asistencia.patches.create_control_de_asistencia_workspace
+control_asistencia.patches.add_control_de_asistencia_workspace_v2
+
 
 

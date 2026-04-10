@@ -1,19 +1,31 @@
 {
  "charts": [],
- "content": "[]",
+ "content": "[{\"id\":\"header1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Control de Asistencia</span>\",\"col\":12}},{\"id\":\"card1\",\"type\":\"card\",\"data\":{\"card_name\":\"Enlaces\",\"col\":4}}]",
  "creation": "2026-04-10 08:30:00.000000",
+ "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
- "extends_another_page": 0,
  "for_user": "",
+ "hide_custom": 0,
  "icon": "calendar",
  "idx": 0,
- "is_default": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
  "is_standard": 1,
  "label": "Control de Asistencia",
  "links": [
   {
-   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Enlaces",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Panel de Turnos",
    "link_count": 0,
    "link_to": "panel-turnos",
@@ -22,7 +34,8 @@
    "type": "Link"
   },
   {
-   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Asignación de Turnos",
    "link_count": 0,
    "link_to": "Shift Assignment",
@@ -31,7 +44,8 @@
    "type": "Link"
   },
   {
-   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Registros de Asistencia",
    "link_count": 0,
    "link_to": "Employee Checkin",
@@ -44,9 +58,19 @@
  "modified_by": "Administrator",
  "module": "Control Asistencia",
  "name": "Control de Asistencia",
+ "number_cards": [],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
- "roles": [],
- "shortcuts": []
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR Manager"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "shortcuts": [],
+ "title": "Control de Asistencia"
 }
