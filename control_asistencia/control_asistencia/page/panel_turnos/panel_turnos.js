@@ -122,6 +122,12 @@ function bindEvents() {
 
     // Click on any day cell to edit
     document.getElementById('grid-wrapper').addEventListener('click', (e) => {
+        const tdEmp = e.target.closest('td.cell-employee');
+        if (tdEmp) {
+            showEditEmployeeDialog(tdEmp.getAttribute('data-employee-id'));
+            return;
+        }
+
         const td = e.target.closest('td[data-employee]');
         if (!td) return;
         const employee = td.dataset.employee;
@@ -228,8 +234,8 @@ function renderGrid(data) {
         rows = `<tr><td colspan="8" style="padding:20px;color:#999;">No hay turnos asignados en esta semana.</td></tr>`;
     }
     for (const emp of data) {
-        let cells = `<td class="cell-employee" title="${emp.employee}">
-            <div style="font-weight: 500;">${emp.employee_name}</div>
+        let cells = `<td class="cell-employee" data-employee-id="${emp.employee}" title="Clic para editar empleado" style="cursor: pointer;" onmouseover="this.style.backgroundColor='#f0f4f8'" onmouseout="this.style.backgroundColor=''">
+            <div style="font-weight: 500; color: #2980b9;">${emp.employee_name}</div>
             <div style="font-size: 0.85em; color: #7f8c8d; margin-top: 3px; line-height: 1.4;">
                 <i class="fa fa-id-card-o"></i> ${emp.custom_identificacion || '—'}<br>
                 <i class="fa fa-building-o"></i> ${emp.branch || 'Sin sucursal'}
@@ -584,4 +590,75 @@ function showAddEmployeeDialog() {
     });
 
     dialog.show();
+}
+
+function showEditEmployeeDialog(employeeName) {
+    if (!employeeName) return;
+    
+    frappe.call({
+        method: 'frappe.client.get',
+        args: { doctype: 'Employee', name: employeeName },
+        freeze: true,
+        callback: function(r) {
+            if (!r.message) return;
+            const emp = r.message;
+            
+            const dialog = new frappe.ui.Dialog({
+                title: __('Editar Empleado: ') + emp.employee_name,
+                fields: [
+                    { fieldname: 'status', fieldtype: 'Select', label: __('Estado'), options: '\nActive\nInactive\nSuspended\nLeft', reqd: 1, default: emp.status },
+                    { fieldtype: 'Section Break' },
+                    { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
+                    { fieldtype: 'HTML', fieldname: 'btn_unlink' }
+                ],
+                primary_action_label: __('Guardar Cambios'),
+                primary_action: function(values) {
+                    frappe.call({
+                        method: 'frappe.client.set_value',
+                        args: { doctype: 'Employee', name: employeeName, fieldname: {
+                            'status': values.status
+                        }},
+                        freeze: true,
+                        callback: function() {
+                            frappe.show_alert({ message: __('Estado actualizado.'), indicator: 'green' });
+                            dialog.hide();
+                            loadWeek(); // Reload grid strictly to reflect status changes indirectly
+                        }
+                    });
+                }
+            });
+
+            if (emp.attendance_device_id) {
+                dialog.fields_dict.btn_unlink.$wrapper.html(`
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-sm btn-danger" id="btn-desvincular-mac">
+                            <i class="fa fa-trash"></i> Desvincular Computadora
+                        </button>
+                    </div>
+                `);
+                
+                dialog.fields_dict.btn_unlink.$wrapper.find('#btn-desvincular-mac').on('click', () => {
+                    frappe.confirm('Al desvincular el equipo, la aplicación de escritorio creará automáticamente una vinculación como si fuera la primera vez durante la próxima marcación del empleado.<br><br>¿Seguro de desvincular la MAC?', () => {
+                        frappe.call({
+                            method: 'frappe.client.set_value',
+                            args: { doctype: 'Employee', name: employeeName, fieldname: 'attendance_device_id', value: '' },
+                            freeze: true,
+                            callback: function() {
+                                frappe.msgprint({ title: 'Computadora Desvinculada', message: 'El dispositivo ha quedado desvinculado con éxito. Se registrará la nueva MAC automáticamente cuando el empleado registre asistencia.', indicator: 'orange' });
+                                dialog.hide();
+                            }
+                        });
+                    });
+                });
+            } else {
+                dialog.fields_dict.btn_unlink.$wrapper.html(`
+                    <div style="margin-top: 15px; color: #7f8c8d; font-size: 0.9em; font-style: italic;">
+                        El empleado no tiene ninguna computadora vinculada actualmente.
+                    </div>
+                `);
+            }
+            
+            dialog.show();
+        }
+    });
 }
