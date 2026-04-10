@@ -1,0 +1,52 @@
+{
+ "charts": [],
+ "content": "[]",
+ "creation": "2026-04-10 08:30:00.000000",
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "extends_another_page": 0,
+ "for_user": "",
+ "icon": "calendar",
+ "idx": 0,
+ "is_default": 0,
+ "is_standard": 1,
+ "label": "Control de Asistencia",
+ "links": [
+  {
+   "dependencies": "",
+   "label": "Panel de Turnos",
+   "link_count": 0,
+   "link_to": "panel-turnos",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "label": "Asignación de Turnos",
+   "link_count": 0,
+   "link_to": "Shift Assignment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "label": "Registros de Asistencia",
+   "link_count": 0,
+   "link_to": "Employee Checkin",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-04-10 08:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Control Asistencia",
+ "name": "Control de Asistencia",
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "roles": [],
+ "shortcuts": []
+}
