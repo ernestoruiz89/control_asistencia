@@ -351,36 +351,39 @@ def get_current_worked_hours(client_time=None, client_timezone=None):
         "break_hours":  _("Tiempo de break: {0}").format(_fmt_td(acc["total_break"])),
     }
 
-import frappe
-
 @frappe.whitelist()
 def get_employee_and_enroll(identificacion, mac_address):
-    # 1. Buscar al empleado por su identificación personalizada
-    employee_name = frappe.db.get_value("Employee", 
+    # 1. Buscar al empleado por su identificación
+    # Asegúrate de que el campo se llama exactamente 'custom_identificacion'
+    employee_id = frappe.db.get_value("Employee", 
         {"custom_identificacion": identificacion}, "name")
     
-    if not employee_name:
-        frappe.throw("No se encontró ningún empleado con la identificación: " + identificacion)
+    if not employee_id:
+        frappe.throw("No se encontró ningún empleado con la identificación: " + str(identificacion))
 
-    employee = frappe.get_doc("Employee", employee_name)
+    # 2. Obtener el nombre y la MAC actual registrada
+    emp_data = frappe.db.get_value("Employee", employee_id, ["employee_name", "attendance_device_id"], as_dict=True)
 
-    # 2. Si el empleado existe pero NO tiene MAC registrada, la vinculamos ahora
-    if not employee.attendance_device_id:
-        employee.attendance_device_id = mac_address
-        employee.save(ignore_permissions=True)
-        frappe.db.commit()
+    # 3. Si NO tiene MAC registrada, la guardamos
+    if not emp_data.attendance_device_id:
+        # Usamos set_value que es más eficiente para un solo campo
+        frappe.db.set_value("Employee", employee_id, "attendance_device_id", mac_address)
+        
+        # ¡CRUCIAL! Sin esto, los cambios no se guardan permanentemente
+        frappe.db.commit() 
+        
         return {
             "status": "enrolled",
-            "employee_id": employee.name,
-            "employee_name": employee.employee_name
+            "employee_id": employee_id,
+            "employee_name": emp_data.employee_name
         }
 
-    # 3. Si ya tiene una MAC, validamos que coincida con la del dispositivo actual
-    if employee.attendance_device_id != mac_address:
+    # 4. Si ya tiene una MAC, validamos que sea la misma
+    if emp_data.attendance_device_id != mac_address:
         frappe.throw("Seguridad: Este dispositivo no está autorizado para este usuario.")
 
     return {
         "status": "validated",
-        "employee_id": employee.name,
-        "employee_name": employee.employee_name
+        "employee_id": employee_id,
+        "employee_name": emp_data.employee_name
     }
