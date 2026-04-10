@@ -26,25 +26,37 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
 
     $(page.body).html(`
         <div class="shift-panel-container">
-            <div class="shift-panel-toolbar">
-                <button class="btn btn-default btn-sm" id="prev-week">◀ Anterior</button>
-                <span class="week-label" id="week-label"></span>
-                <button class="btn btn-default btn-sm" id="next-week">Siguiente ▶</button>
-                <div style="flex:1"></div>
-                <select id="branch-filter" class="form-control input-sm" style="max-width: 180px; margin-right: 10px; display: inline-block;">
-                    <option value="">Todas las sucursales</option>
-                </select>
-                <select id="status-filter" class="form-control input-sm" style="max-width: 150px; margin-right: 10px; display: inline-block;">
-                    <option value="All">Todos los estados</option>
-                    <option value="Active" selected>Activos</option>
-                    <option value="Inactive">Inactivos</option>
-                    <option value="Suspended">Suspendidos</option>
-                    <option value="Left">Egresados (Left)</option>
-                </select>
-                <input type="text" id="employee-filter" class="form-control input-sm" placeholder="Buscar empleado..." style="max-width: 200px;">
-                <button class="btn btn-primary btn-sm" id="btn-create-shift">+ Crear Turno</button>
-                <button class="btn btn-success btn-sm" id="btn-assign-shift">Asignar Turno</button>
-                <button class="btn btn-secondary btn-sm" id="btn-add-employee">+ Agregar Empleado</button>
+            <div class="shift-panel-toolbar" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;">
+                <!-- Fila 1: Navegador de Semanas -->
+                <div style="display: flex; align-items: center; justify-content: center; background: #fdfdfd; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
+                    <button class="btn btn-default btn-sm" id="prev-week" style="box-shadow: none;">◀ Anterior</button>
+                    <span class="week-label" id="week-label" style="font-weight: 600; font-size: 1.15em; margin: 0 25px; min-width: 300px; text-align: center; color: #4a5568;"></span>
+                    <button class="btn btn-default btn-sm" id="next-week" style="box-shadow: none;">Siguiente ▶</button>
+                </div>
+                
+                <!-- Fila 2: Filtros y Acciones -->
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <select id="branch-filter" class="form-control input-sm" style="max-width: 180px;">
+                        <option value="">Todas las sucursales</option>
+                    </select>
+                    <select id="status-filter" class="form-control input-sm" style="max-width: 150px;">
+                        <option value="All">Todos los estados</option>
+                        <option value="Active" selected>Activos</option>
+                        <option value="Inactive">Inactivos</option>
+                        <option value="Suspended">Suspendidos</option>
+                        <option value="Left">Egresados (Left)</option>
+                    </select>
+                    <div style="position: relative; max-width: 220px;">
+                        <i class="fa fa-search" style="position: absolute; left: 10px; top: 9px; color: #a0aec0;"></i>
+                        <input type="text" id="employee-filter" class="form-control input-sm" placeholder="Buscar empleado..." style="padding-left: 30px;">
+                    </div>
+
+                    <div style="flex:1"></div>
+
+                    <button class="btn btn-primary btn-sm" id="btn-create-shift" title="Configurar un nuevo tipo de turno">+ Crear Turno</button>
+                    <button class="btn btn-success btn-sm" id="btn-assign-shift" title="Programar turnos masivamente">Asignar Turno</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-add-employee" title="Registrar nuevo empleado">+ Agregar Empleado</button>
+                </div>
             </div>
             <div class="shift-legend" id="shift-legend"></div>
             <div id="grid-wrapper" style="max-height: 70vh; overflow: auto; border: 1px solid var(--border-color, #d1d8dd);"></div>
