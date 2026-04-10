@@ -70,6 +70,9 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                     <button class="btn btn-secondary btn-sm" id="btn-add-employee">
                         <i class="fa fa-user-plus"></i> ${__('Nuevo Empleado')}
                     </button>
+                    <button class="btn btn-default btn-sm" id="btn-fullscreen" title="${__('Pantalla Completa')}">
+                        <i class="fa fa-expand"></i>
+                    </button>
                 </div>
             </div>
             <div id="grid-wrapper" style="max-height: 70vh; overflow: auto; border: 1px solid var(--border-color, #d1d8dd);"></div>
@@ -178,6 +181,29 @@ function bindEvents() {
     document.getElementById('btn-assign-shift').addEventListener('click', showAssignShiftDialog);
     document.getElementById('btn-add-employee').addEventListener('click', () => {
         showAddEmployeeDialog();
+    });
+
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+        const container = document.querySelector('.shift-panel-container');
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().catch(err => {
+                console.error(`Error Fullscreen: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+        const btn = document.getElementById('btn-fullscreen');
+        const container = document.querySelector('.shift-panel-container');
+        if (document.fullscreenElement) {
+            btn.innerHTML = '<i class="fa fa-compress"></i>';
+            container.classList.add('is-fullscreen');
+        } else {
+            btn.innerHTML = '<i class="fa fa-expand"></i>';
+            container.classList.remove('is-fullscreen');
+        }
     });
 
     // Click on any day cell to edit

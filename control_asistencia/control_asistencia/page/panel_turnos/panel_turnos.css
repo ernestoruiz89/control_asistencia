@@ -109,3 +109,14 @@
     filter: brightness(0.93);
     box-shadow: inset 0 0 0 2px var(--primary, #2490ef);
 }
+
+/* ── Fullscreen Adjustments ── */
+.shift-panel-container:fullscreen {
+    background-color: #ffffff;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.shift-panel-container.is-fullscreen #grid-wrapper {
+    max-height: 85vh !important;
+}
