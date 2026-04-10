@@ -291,12 +291,25 @@ function showAssignShiftDialog() {
                 fields: [
                     { fieldname: 'employee', label: __('Empleado'), fieldtype: 'Link', options: 'Employee', reqd: 1 },
                     { fieldname: 'shift_type', label: __('Turno'), fieldtype: 'Select', options: options, reqd: 1 },
+                    { fieldtype: 'Section Break' },
                     { fieldname: 'start_date', label: __('Fecha Inicio'), fieldtype: 'Date', reqd: 1, default: fmtDate(currentWeekStart) },
                     { fieldname: 'end_date',   label: __('Fecha Fin'),    fieldtype: 'Date', reqd: 1,
                         default: fmtDate(new Date(currentWeekStart.getTime() + 6*24*60*60*1000)) },
+                    { fieldtype: 'Section Break', label: __('Días Programables') },
+                    { fieldname: 'mon', label: __('Lunes'), fieldtype: 'Check', default: 1 },
+                    { fieldname: 'tue', label: __('Martes'), fieldtype: 'Check', default: 1 },
+                    { fieldname: 'wed', label: __('Miércoles'), fieldtype: 'Check', default: 1 },
+                    { fieldname: 'thu', label: __('Jueves'), fieldtype: 'Check', default: 1 },
+                    { fieldname: 'fri', label: __('Viernes'), fieldtype: 'Check', default: 1 },
+                    { fieldtype: 'Column Break' },
+                    { fieldname: 'sat', label: __('Sábado'), fieldtype: 'Check', default: 0 },
+                    { fieldname: 'sun', label: __('Domingo'), fieldtype: 'Check', default: 0 },
                 ],
                 primary_action_label: __('Asignar'),
                 primary_action: (values) => {
+                    values.days_enabled = JSON.stringify([
+                        values.mon, values.tue, values.wed, values.thu, values.fri, values.sat, values.sun
+                    ]);
                     frappe.call({
                         method: `${API}.assign_shift`,
                         args: values,

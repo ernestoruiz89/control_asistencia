@@ -90,18 +90,30 @@ def create_shift_type(start_time, end_time):
 
 
 @frappe.whitelist()
-def assign_shift(employee, shift_type, start_date, end_date=None):
+def assign_shift(employee, shift_type, start_date, end_date=None, days_enabled=None):
     """Create one Shift Assignment per day so each day can be modified individually."""
+    import json
     if not end_date:
         end_date = start_date
 
     start = datetime.strptime(str(start_date), "%Y-%m-%d").date()
     end = datetime.strptime(str(end_date), "%Y-%m-%d").date()
 
+    enabled_list = [1] * 7
+    if days_enabled:
+        try:
+            enabled_list = json.loads(days_enabled)
+        except Exception:
+            pass
+
     created = []
     current = start
     while current <= end:
         ds = str(current)
+
+        if not enabled_list[current.weekday()]:
+            current += timedelta(days=1)
+            continue
 
         # Cancel any existing submitted assignments that cover this day
         existing = frappe.get_all(
