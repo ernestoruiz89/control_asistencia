@@ -472,7 +472,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
             { fieldname: 'right_html', fieldtype: 'HTML', options: rightHtml },
             { fieldname: 'leave_type', label: __('Aplicar Nuevo Permiso'), fieldtype: 'Link', options: 'Leave Type' },
             { fieldname: 'half_day', label: __('Sólo abarca medio día'), fieldtype: 'Check', default: 0 },
-            { fieldname: 'description', label: __('Sustentación Requerida'), fieldtype: 'Small Text' }
+            { fieldname: 'description', label: __('Motivo:'), fieldtype: 'Small Text' }
         );
     }
 
