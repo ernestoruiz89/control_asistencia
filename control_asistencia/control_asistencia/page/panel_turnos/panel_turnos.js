@@ -361,7 +361,7 @@ function renderGrid(data) {
             statusTag = ` <small style="color: #e74c3c; font-weight: normal;">(${label})</small>`;
         }
         let cells = `<td class="cell-employee" data-employee-id="${emp.employee}" title="Clic para editar empleado" style="cursor: pointer;">
-            <div style="font-weight: 500; color: var(--primary-color, #2980b9);">${emp.employee_name}${statusTag}</div>
+            <div style="font-weight: 600;">${emp.employee_name}${statusTag}</div>
         </td>`;
         for (const day of emp.days) {
             const cls = 'cell-' + day.status;

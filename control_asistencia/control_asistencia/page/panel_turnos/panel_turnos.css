@@ -83,6 +83,7 @@
     z-index: 9;
     background: var(--card-bg, #ffffff);
     cursor: pointer;
+    color: var(--text-color);
 }
 .shift-grid td.cell-employee:hover {
     background: var(--bg-light-gray, #f0f4f8);
