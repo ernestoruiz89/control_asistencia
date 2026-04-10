@@ -146,13 +146,26 @@ fixtures = [
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Shift Assignment": {
+		"on_update": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"on_cancel": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"on_trash": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"after_insert": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update"
+	},
+	"Employee Checkin": {
+		"on_update": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"on_cancel": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"on_trash": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"after_insert": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update"
+	},
+	"Leave Application": {
+		"on_update": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"on_cancel": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"on_trash": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update",
+		"after_insert": "control_asistencia.control_asistencia.shift_panel.notify_shift_panel_update"
+	}
+}
 
 # Scheduled Tasks
 # ---------------

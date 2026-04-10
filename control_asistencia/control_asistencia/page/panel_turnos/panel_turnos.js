@@ -43,6 +43,22 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
     renderLegend();
     bindEvents();
     loadWeek();
+
+    // Escuchar eventos en tiempo real (WebSockets) desde el backend
+    frappe.realtime.on('update_shift_panel', () => {
+        loadWeek();
+    });
+};
+
+frappe.pages['panel-turnos'].on_page_show = function (wrapper) {
+    // The panel auto-refreshes using real-time WebSockets and precise millisecond timeouts
+    // so no periodic polling is needed here.
+};
+
+frappe.pages['panel-turnos'].on_page_hide = function (wrapper) {
+    if (typeof clearShiftTimeouts === 'function') {
+        clearShiftTimeouts();
+    }
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -126,6 +142,32 @@ function loadWeek() {
     });
 }
 
+let shiftTimeouts = [];
+
+function clearShiftTimeouts() {
+    shiftTimeouts.forEach(clearTimeout);
+    shiftTimeouts = [];
+}
+
+function scheduleTimeouts(data) {
+    clearShiftTimeouts();
+    const now = new Date();
+    for (const emp of data) {
+        for (const day of emp.days) {
+            if (day.trigger_at) {
+                const triggerTime = new Date(day.trigger_at);
+                const delayMs = triggerTime - now;
+                if (delayMs > 0 && delayMs <= 86400000) { // only if within 24 hours
+                    const to = setTimeout(() => {
+                        loadWeek();
+                    }, delayMs);
+                    shiftTimeouts.push(to);
+                }
+            }
+        }
+    }
+}
+
 function applyFilterAndRender() {
     const filterText = (document.getElementById('employee-filter').value || '').toLowerCase();
     let data = weeklyData;
@@ -136,6 +178,7 @@ function applyFilterAndRender() {
         );
     }
     renderGrid(data);
+    scheduleTimeouts(data);
 }
 
 function renderGrid(data) {

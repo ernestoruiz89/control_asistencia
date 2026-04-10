@@ -146,9 +146,10 @@ def get_weekly_panel_data(week_start):
     """
     from datetime import date as date_type
 
+    from frappe.utils import getdate, nowdate
     week_start = datetime.strptime(week_start, "%Y-%m-%d").date()
     week_end = week_start + timedelta(days=6)
-    today = datetime.now().date()
+    today = getdate(nowdate())
 
     # ── 1. Employees with shift assignments in this range ──
     assignments = frappe.get_all(
@@ -259,6 +260,7 @@ def get_weekly_panel_data(week_start):
             status = "not_scheduled"
             shift_label = ""
             detail = ""
+            trigger_at = None
 
             st = shift_types.get(shift_name, {}) if shift_name else None
 
@@ -280,10 +282,36 @@ def get_weekly_panel_data(week_start):
                 else:
                     shift_label = shift_name
 
+                shift_start = st.get("start_time") or timedelta(hours=8)
+                shift_end = st.get("end_time") or timedelta(hours=17)
+                grace_in = int(st.get("late_entry_grace_period") or 0)
+                grace_out = int(st.get("early_exit_grace_period") or 0)
+
+                # Convert shift times to datetime for comparison
+                if isinstance(shift_start, timedelta):
+                    shift_start_dt = datetime.combine(d, time()) + shift_start
+                else:
+                    shift_start_dt = datetime.combine(d, time()) + shift_start
+
+                if isinstance(shift_end, timedelta):
+                    shift_end_dt = datetime.combine(d, time()) + shift_end
+                else:
+                    shift_end_dt = datetime.combine(d, time()) + shift_end
+
                 if d > today:
                     status = "future"
                 elif not day_checkins:
-                    status = "absent"
+                    if d == today:
+                        from frappe.utils import now_datetime
+                        now_dt = now_datetime().replace(tzinfo=None)
+                        if now_dt < shift_start_dt:
+                            status = "future"
+                            detail = "Pendiente"
+                            trigger_at = shift_start_dt.isoformat()
+                        else:
+                            status = "absent"
+                    else:
+                        status = "absent"
                 else:
                     # Determine on-time vs late/early
                     first_in = None
@@ -293,22 +321,6 @@ def get_weekly_panel_data(week_start):
                             first_in = ck["time"]
                         if ck["action"] == "clock-out":
                             last_out = ck["time"]
-
-                    shift_start = st.get("start_time") or timedelta(hours=8)
-                    shift_end = st.get("end_time") or timedelta(hours=17)
-                    grace_in = int(st.get("late_entry_grace_period") or 0)
-                    grace_out = int(st.get("early_exit_grace_period") or 0)
-
-                    # Convert shift times to datetime for comparison
-                    if isinstance(shift_start, timedelta):
-                        shift_start_dt = datetime.combine(d, time()) + shift_start
-                    else:
-                        shift_start_dt = datetime.combine(d, time()) + shift_start
-
-                    if isinstance(shift_end, timedelta):
-                        shift_end_dt = datetime.combine(d, time()) + shift_end
-                    else:
-                        shift_end_dt = datetime.combine(d, time()) + shift_end
 
                     late_in = False
                     early_out = False
@@ -338,7 +350,8 @@ def get_weekly_panel_data(week_start):
                 "shift": shift_label,
                 "shift_type": shift_name or "",
                 "status": status,
-                "detail": detail
+                "detail": detail,
+                "trigger_at": trigger_at
             })
 
         # Always include active employees
@@ -484,3 +497,8 @@ def cancel_leave(leave_name):
     doc.cancel()
     frappe.db.commit()
     return {"name": doc.name}
+
+
+def notify_shift_panel_update(doc, method):
+    """Publish a realtime event when a related document is modified."""
+    frappe.publish_realtime("update_shift_panel")
