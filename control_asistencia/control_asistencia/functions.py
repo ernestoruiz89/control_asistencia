@@ -173,8 +173,13 @@ def register_checkin(
     employee = _get_employee()
 
     saved_mac = frappe.db.get_value("Employee", employee, "attendance_device_id")
-    if saved_mac and saved_mac != device_id:
-        frappe.throw("Este dispositivo no está autorizado para realizar marcaciones.")
+    if saved_mac:
+        if saved_mac != device_id:
+            frappe.throw("Este dispositivo no está autorizado para realizar marcaciones.")
+    else:
+        if device_id:
+            frappe.db.set_value("Employee", employee, "attendance_device_id", device_id)
+            frappe.db.commit()
 
     require_geo = frappe.db.get_single_value(
         "Ajustes de Control Asistencia", "require_geolocation"
