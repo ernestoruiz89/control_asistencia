@@ -528,7 +528,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
     // Contextual button handling based on Leave statys
     if (!hasLeave) {
         const $btnLeave = $(`<button class="btn btn-warning btn-sm" style="margin-right:8px;">
-            <i class="fa fa-calendar-plus-o"></i> ${__('Registrar Vacaciones')}
+            <i class="fa fa-calendar-plus-o"></i> ${__('Registrar Permiso')}
         </button>`);
         $footer.find('.btn-primary').before($btnLeave);
         $btnLeave.on('click', () => {
