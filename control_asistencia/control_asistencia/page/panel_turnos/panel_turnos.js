@@ -412,6 +412,13 @@ function showAssignShiftDialog() {
         callback: ({ message: shifts }) => {
             const options = (shifts || []).map(s => ({ label: s.label || s.name, value: s.name }));
 
+            let defaultEndDate;
+            if (currentViewType === 'month') {
+                defaultEndDate = new Date(currentStartDate.getFullYear(), currentStartDate.getMonth() + 1, 0);
+            } else {
+                defaultEndDate = new Date(currentStartDate.getTime() + 6 * 24 * 60 * 60 * 1000);
+            }
+
             const d = new frappe.ui.Dialog({
                 title: __('Asignar Turno'),
                 fields: [
@@ -419,8 +426,7 @@ function showAssignShiftDialog() {
                     { fieldname: 'shift_type', label: __('Turno'), fieldtype: 'Select', options: options, reqd: 1 },
                     { fieldtype: 'Section Break' },
                     { fieldname: 'start_date', label: __('Fecha Inicio'), fieldtype: 'Date', reqd: 1, default: fmtDate(currentStartDate) },
-                    { fieldname: 'end_date',   label: __('Fecha Fin'),    fieldtype: 'Date', reqd: 1,
-                        default: fmtDate(new Date(currentStartDate.getTime() + 6*24*60*60*1000)) },
+                    { fieldname: 'end_date',   label: __('Fecha Fin'),    fieldtype: 'Date', reqd: 1, default: fmtDate(defaultEndDate) },
                     { fieldtype: 'Section Break', label: __('Días Programables') },
                     { fieldtype: 'HTML', fieldname: 'quick_actions' },
                     { fieldtype: 'Section Break' },
