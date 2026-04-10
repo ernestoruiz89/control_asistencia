@@ -67,12 +67,13 @@
     z-index: 10;
 }
 .shift-grid th.col-employee {
-    width: 200px;
+    width: 250px;
     text-align: left;
     position: sticky;
     left: 0;
     z-index: 11;
-    background: var(--subtle-fg, #f7f7f7);
+    background: var(--bg-light-gray, #f7f7f7);
+    color: var(--text-color);
 }
 .shift-grid td.cell-employee {
     text-align: left;
@@ -80,7 +81,11 @@
     position: sticky;
     left: 0;
     z-index: 9;
-    background: #ffffff;
+    background: var(--card-bg, #ffffff);
+    cursor: pointer;
+}
+.shift-grid td.cell-employee:hover {
+    background: var(--bg-light-gray, #f0f4f8);
 }
 
 /* ── Status colors ── */
@@ -88,8 +93,8 @@
 .cell-out_of_schedule { background: #ffe8cc !important; color: #7a4100; }
 .cell-absent        { background: #f8d7da !important; color: #721c24; }
 .cell-leave         { background: #cce5ff !important; color: #004085; }
-.cell-not_scheduled { background: #ffffff !important; color: #999;    }
-.cell-future        { background: #ffffff !important; color: #bbb;    }
+.cell-not_scheduled { background: var(--bg-color) !important; color: var(--text-muted);    }
+.cell-future        { background: var(--bg-color) !important; color: var(--text-muted);    }
 
 .shift-grid td .shift-name {
     font-weight: 600;
@@ -112,7 +117,7 @@
 
 /* ── Fullscreen Adjustments ── */
 .shift-panel-container:fullscreen {
-    background-color: #ffffff;
+    background-color: var(--bg-color, #ffffff);
     padding: 20px;
     overflow-y: auto;
 }

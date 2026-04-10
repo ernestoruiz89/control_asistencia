@@ -34,12 +34,12 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                         <option value="week">Semanal</option>
                         <option value="month">Mensual</option>
                     </select>
-                    <div style="display: flex; align-items: center; background: #fff; border: 1px solid #d1d8dd; border-radius: 4px; padding: 2px;">
-                        <button class="btn btn-default btn-xs" id="prev-btn" style="border:none; background:transparent;">◀</button>
-                        <span id="date-label" style="font-weight: 600; margin: 0 10px; min-width: 180px; text-align: center; font-size: 13px;"></span>
-                        <button class="btn btn-default btn-xs" id="next-btn" style="border:none; background:transparent;">▶</button>
+                    <div style="display: flex; align-items: center; background: var(--control-bg, #fff); border: 1px solid var(--border-color, #d1d8dd); border-radius: 4px; padding: 2px;">
+                        <button class="btn btn-default btn-xs" id="prev-btn" style="border:none; background:transparent; color: var(--text-color);">◀</button>
+                        <span id="date-label" style="font-weight: 600; margin: 0 10px; min-width: 180px; text-align: center; font-size: 13px; color: var(--text-color);"></span>
+                        <button class="btn btn-default btn-xs" id="next-btn" style="border:none; background:transparent; color: var(--text-color);">▶</button>
                     </div>
-                    <div id="shift-legend" style="display: flex; gap: 15px; align-items: center; font-size: 12px; color: #718096;"></div>
+                    <div id="shift-legend" style="display: flex; gap: 15px; align-items: center; font-size: 12px; color: var(--text-muted, #718096);"></div>
                 </div>
 
                 <!-- Fila 2: Filtros y Acciones -->
@@ -123,7 +123,7 @@ function renderLegend() {
     const colors = {
         on_time: '#d4edda', out_of_schedule: '#ffe8cc',
         absent: '#f8d7da', leave: '#cce5ff',
-        not_scheduled: '#ffffff', future: '#ffffff',
+        not_scheduled: 'var(--bg-color)', future: 'var(--bg-color)',
     };
     let html = '';
     for (const [key, label] of Object.entries(STATUS_LABELS)) {
@@ -360,8 +360,8 @@ function renderGrid(data) {
             const label = labelMapping[emp.status] || emp.status;
             statusTag = ` <small style="color: #e74c3c; font-weight: normal;">(${label})</small>`;
         }
-        let cells = `<td class="cell-employee" data-employee-id="${emp.employee}" title="Clic para editar empleado" style="cursor: pointer;" onmouseover="this.style.backgroundColor='#f0f4f8'" onmouseout="this.style.backgroundColor=''">
-            <div style="font-weight: 500; color: #2980b9;">${emp.employee_name}${statusTag}</div>
+        let cells = `<td class="cell-employee" data-employee-id="${emp.employee}" title="Clic para editar empleado" style="cursor: pointer;">
+            <div style="font-weight: 500; color: var(--primary-color, #2980b9);">${emp.employee_name}${statusTag}</div>
         </td>`;
         for (const day of emp.days) {
             const cls = 'cell-' + day.status;
