@@ -185,7 +185,7 @@ def register_checkin(
     client_tz = _resolve_tz(client_timezone)
     now_client = datetime.now(client_tz)
 
-    custom_registration_type = custom_registration_type.lower()
+    custom_registration_type = (custom_registration_type or "").lower()
     checkin = frappe.get_doc({
         "doctype": "Employee Checkin",
         "employee": employee,
