@@ -86,6 +86,19 @@ class AttendanceApp:
                   font=("Arial", 10, "bold"), height=2, width=25, relief="flat",
                   command=self.process_enrollment).pack(pady=10)
 
+    def _extract_error(self, res):
+        try:
+            data = res.json()
+            if "exception" in data:
+                return data["exception"].split(":", 1)[-1].strip()
+            if "_server_messages" in data:
+                import json
+                msgs = json.loads(data["_server_messages"])
+                return json.loads(msgs[0]).get("message", res.text)
+        except Exception:
+            pass
+        return res.text
+
     def process_enrollment(self):
         ident = self.ent_ident.get().strip()
         if not ident: return
@@ -104,7 +117,8 @@ class AttendanceApp:
                     self.emp_full_name.set(data['employee_name'])
                     self.show_attendance_screen()
             else:
-                messagebox.showerror("Error", f"Servidor: {res.status_code}\n{res.text}")
+                err_msg = self._extract_error(res)
+                messagebox.showerror("Error", err_msg)
         except Exception as e:
             messagebox.showerror("Error de Conexión", str(e))
 
@@ -194,8 +208,8 @@ class AttendanceApp:
                 self.show_notif(f"¡EXITOSO!", "#2e7d32")
                 self.refresh_ui_state()
             else:
-                error_detail = res.text
-                messagebox.showerror("Error de Registro", f"Código: {res.status_code}\nDetalle: {error_detail}")
+                err_msg = self._extract_error(res)
+                messagebox.showerror("Error de Registro", err_msg)
                 self.refresh_ui_state()
         except Exception as e:
             messagebox.showerror("Error Crítico", str(e))
