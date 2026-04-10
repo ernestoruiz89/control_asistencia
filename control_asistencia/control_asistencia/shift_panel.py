@@ -375,6 +375,7 @@ def get_weekly_panel_data(week_start):
             "employee_name": info["employee_name"],
             "custom_identificacion": info.get("custom_identificacion") or "",
             "branch": info.get("branch") or "",
+            "status": info.get("status") or "Active",
             "days": days,
         })
 
