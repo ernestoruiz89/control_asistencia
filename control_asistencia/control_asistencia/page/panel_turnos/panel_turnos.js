@@ -296,20 +296,26 @@ function showAssignShiftDialog() {
                     { fieldname: 'end_date',   label: __('Fecha Fin'),    fieldtype: 'Date', reqd: 1,
                         default: fmtDate(new Date(currentWeekStart.getTime() + 6*24*60*60*1000)) },
                     { fieldtype: 'Section Break', label: __('Días Programables') },
-                    { fieldname: 'mon', label: __('Lunes'), fieldtype: 'Check', default: 1 },
-                    { fieldname: 'tue', label: __('Martes'), fieldtype: 'Check', default: 1 },
-                    { fieldname: 'wed', label: __('Miércoles'), fieldtype: 'Check', default: 1 },
-                    { fieldname: 'thu', label: __('Jueves'), fieldtype: 'Check', default: 1 },
-                    { fieldname: 'fri', label: __('Viernes'), fieldtype: 'Check', default: 1 },
+                    { fieldtype: 'HTML', fieldname: 'quick_actions' },
+                    { fieldname: 'mon', label: __('Lunes'), fieldtype: 'Check', default: 0 },
+                    { fieldname: 'tue', label: __('Martes'), fieldtype: 'Check', default: 0 },
+                    { fieldname: 'wed', label: __('Miércoles'), fieldtype: 'Check', default: 0 },
+                    { fieldname: 'thu', label: __('Jueves'), fieldtype: 'Check', default: 0 },
+                    { fieldname: 'fri', label: __('Viernes'), fieldtype: 'Check', default: 0 },
                     { fieldtype: 'Column Break' },
                     { fieldname: 'sat', label: __('Sábado'), fieldtype: 'Check', default: 0 },
                     { fieldname: 'sun', label: __('Domingo'), fieldtype: 'Check', default: 0 },
                 ],
                 primary_action_label: __('Asignar'),
                 primary_action: (values) => {
-                    values.days_enabled = JSON.stringify([
-                        values.mon, values.tue, values.wed, values.thu, values.fri, values.sat, values.sun
-                    ]);
+                    const selected = [values.mon, values.tue, values.wed, values.thu, values.fri, values.sat, values.sun];
+                    let is_empty = selected.every(val => !val);
+                    if (is_empty) {
+                        frappe.msgprint({ title: 'Nota Informativa', message: 'Como no seleccionaste días específicos, el turno se programará sobre <b>todos los días</b> correspondientes entre la Fecha Inicial y Fecha Final de manera ininterrumpida.', indicator: 'blue' });
+                        values.days_enabled = JSON.stringify([1, 1, 1, 1, 1, 1, 1]); // Habilita completamente todos
+                    } else {
+                        values.days_enabled = JSON.stringify(selected);
+                    }
                     frappe.call({
                         method: `${API}.assign_shift`,
                         args: values,
@@ -328,6 +334,24 @@ function showAssignShiftDialog() {
                     });
                 },
             });
+            d.fields_dict.quick_actions.$wrapper.html(`
+                <div style="margin-bottom: 12px;">
+                    <button type="button" class="btn btn-xs btn-default" id="sel-all">Seleccionar Todo</button>
+                    <button type="button" class="btn btn-xs btn-default" id="sel-week">Lunes - Viernes</button>
+                    <button type="button" class="btn btn-xs btn-default" id="sel-none">Ninguno</button>
+                </div>
+            `);
+            d.fields_dict.quick_actions.$wrapper.find('#sel-all').on('click', () => {
+                ['mon','tue','wed','thu','fri','sat','sun'].forEach(f => d.set_value(f, 1));
+            });
+            d.fields_dict.quick_actions.$wrapper.find('#sel-week').on('click', () => {
+                ['mon','tue','wed','thu','fri'].forEach(f => d.set_value(f, 1));
+                ['sat','sun'].forEach(f => d.set_value(f, 0));
+            });
+            d.fields_dict.quick_actions.$wrapper.find('#sel-none').on('click', () => {
+                ['mon','tue','wed','thu','fri','sat','sun'].forEach(f => d.set_value(f, 0));
+            });
+
             d.show();
         },
     });
