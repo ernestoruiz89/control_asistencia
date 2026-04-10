@@ -236,10 +236,6 @@ function renderGrid(data) {
     for (const emp of data) {
         let cells = `<td class="cell-employee" data-employee-id="${emp.employee}" title="Clic para editar empleado" style="cursor: pointer;" onmouseover="this.style.backgroundColor='#f0f4f8'" onmouseout="this.style.backgroundColor=''">
             <div style="font-weight: 500; color: #2980b9;">${emp.employee_name}</div>
-            <div style="font-size: 0.85em; color: #7f8c8d; margin-top: 3px; line-height: 1.4;">
-                <i class="fa fa-id-card-o"></i> ${emp.custom_identificacion || '—'}<br>
-                <i class="fa fa-building-o"></i> ${emp.branch || 'Sin sucursal'}
-            </div>
         </td>`;
         for (const day of emp.days) {
             const cls = 'cell-' + day.status;
@@ -607,17 +603,35 @@ function showEditEmployeeDialog(employeeName) {
                 title: __('Editar Empleado: ') + emp.employee_name,
                 fields: [
                     { fieldname: 'status', fieldtype: 'Select', label: __('Estado'), options: '\nActive\nInactive\nSuspended\nLeft', reqd: 1, default: emp.status },
+                    { fieldname: 'relieving_date', fieldtype: 'Date', label: __('Fecha de Salida'), depends_on: 'eval:doc.status=="Left"' },
+                    { fieldtype: 'Section Break' },
+                    { fieldname: 'first_name', fieldtype: 'Data', label: __('Primer Nombre'), reqd: 1, default: emp.first_name },
+                    { fieldname: 'middle_name', fieldtype: 'Data', label: __('Segundo Nombre'), default: emp.middle_name },
+                    { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos'), default: emp.last_name },
+                    { fieldname: 'date_of_birth', fieldtype: 'Date', label: __('Fecha de Nacimiento'), reqd: 1, default: emp.date_of_birth },
+                    { fieldtype: 'Column Break' },
+                    { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación'), reqd: 1, default: emp.custom_identificacion },
+                    { fieldname: 'gender', fieldtype: 'Select', label: __('Género'), options: '\nMale\nFemale\nOther', reqd: 1, default: emp.gender },
+                    { fieldtype: 'Section Break' },
+                    { fieldname: 'date_of_joining', fieldtype: 'Date', label: __('Fecha de Ingreso'), reqd: 1, default: emp.date_of_joining },
+                    { fieldname: 'branch', fieldtype: 'Link', options: 'Branch', label: __('Sucursal (Branch)'), default: emp.branch },
                     { fieldtype: 'Section Break' },
                     { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
                     { fieldtype: 'HTML', fieldname: 'btn_unlink' }
                 ],
                 primary_action_label: __('Guardar Cambios'),
                 primary_action: function(values) {
+                    if (values.status === 'Left' && !values.relieving_date) {
+                        frappe.msgprint(__('La <b>Fecha de Salida</b> es requerida cuando el estado es "Left".'));
+                        return;
+                    }
+                    let db_values = Object.assign({}, values);
+                    if (db_values.status !== 'Left') {
+                        db_values.relieving_date = null;
+                    }
                     frappe.call({
                         method: 'frappe.client.set_value',
-                        args: { doctype: 'Employee', name: employeeName, fieldname: {
-                            'status': values.status
-                        }},
+                        args: { doctype: 'Employee', name: employeeName, fieldname: db_values },
                         freeze: true,
                         callback: function() {
                             frappe.show_alert({ message: __('Estado actualizado.'), indicator: 'green' });
