@@ -160,6 +160,7 @@ def get_server_time():
 def register_checkin(
     log_type,
     custom_registration_type,
+    device_id=None,
     latitude=None,
     longitude=None,
     client_timezone=None,
@@ -170,6 +171,10 @@ def register_checkin(
     automatically appended.
     """
     employee = _get_employee()
+
+    saved_mac = frappe.db.get_value("Employee", employee, "attendance_device_id")
+    if saved_mac and saved_mac != device_id:
+        frappe.throw("Este dispositivo no está autorizado para realizar marcaciones.")
 
     require_geo = frappe.db.get_single_value(
         "Ajustes de Control Asistencia", "require_geolocation"
@@ -344,4 +349,38 @@ def get_current_worked_hours(client_time=None, client_timezone=None):
     return {
         "worked_hours": _("Tiempo total laborado: {0}").format(_fmt_td(acc["total_work"])),
         "break_hours":  _("Tiempo de break: {0}").format(_fmt_td(acc["total_break"])),
+    }
+
+import frappe
+
+@frappe.whitelist()
+def get_employee_and_enroll(identificacion, mac_address):
+    # 1. Buscar al empleado por su identificación personalizada
+    employee_name = frappe.db.get_value("Employee", 
+        {"custom_identificacion": identificacion}, "name")
+    
+    if not employee_name:
+        frappe.throw("No se encontró ningún empleado con la identificación: " + identificacion)
+
+    employee = frappe.get_doc("Employee", employee_name)
+
+    # 2. Si el empleado existe pero NO tiene MAC registrada, la vinculamos ahora
+    if not employee.attendance_device_id:
+        employee.attendance_device_id = mac_address
+        employee.save(ignore_permissions=True)
+        frappe.db.commit()
+        return {
+            "status": "enrolled",
+            "employee_id": employee.name,
+            "employee_name": employee.employee_name
+        }
+
+    # 3. Si ya tiene una MAC, validamos que coincida con la del dispositivo actual
+    if employee.attendance_device_id != mac_address:
+        frappe.throw("Seguridad: Este dispositivo no está autorizado para este usuario.")
+
+    return {
+        "status": "validated",
+        "employee_id": employee.name,
+        "employee_name": employee.employee_name
     }
