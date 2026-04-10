@@ -440,7 +440,7 @@ function _buildDayDialog(employee, employeeName, date, details) {
         }
         leftHtml += '</table></div>';
     } else {
-        leftHtml += `<div class="text-muted" style="margin-bottom:15px;font-size:13px;font-style:italic;">${__('No hay ninguna marcación biométrica hoy.')}</div>`;
+        leftHtml += `<div class="text-muted" style="margin-bottom:15px;font-size:13px;font-style:italic;">${__('No hay ninguna marcación para este día.')}</div>`;
     }
     leftHtml += '</div>';
 
