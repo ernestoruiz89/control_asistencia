@@ -21,7 +21,7 @@ const ALLOWED_DISTANCE_METERS = 20;
 
 export default function App() {
   // --------- ESTADOS DE AUTENTICACION Y PERFIL ---------
-  const [siteUrl, setSiteUrl] = useState('');
+  const [siteUrl, setSiteUrl] = useState('https://tools.findenicaragua.com');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -281,7 +281,7 @@ export default function App() {
         </View>
 
         <TouchableOpacity 
-          style={[styles.btnAction, { backgroundColor: '#6366f1', marginTop: 20 }]} 
+          style={styles.btnLogin} 
           onPress={login}
           disabled={isLoggingIn}
         >
@@ -563,6 +563,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#f43f5e',
     shadowColor: '#f43f5e',
     marginLeft: 10,
+  },
+  btnLogin: {
+    backgroundColor: '#6366f1',
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
   },
   btnDisabled: {
     backgroundColor: '#94a3b8',
