@@ -10,9 +10,12 @@ import {
   Easing,
   StatusBar,
   TextInput,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import * as Location from 'expo-location';
+import * as Application from 'expo-application';
+import * as Device from 'expo-device';
 import { getDistance } from 'geolib';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -189,6 +192,16 @@ export default function App() {
   const handleCheckInOut = async (actionType: 'IN' | 'OUT') => {
     await updateLocation();
 
+    // Obtener ID único del dispositivo móvil simulando la "MAC"
+    let deviceId = 'unknown';
+    try {
+        if (Platform.OS === 'android') {
+            deviceId = Application.getAndroidId();
+        } else if (Platform.OS === 'ios') {
+            deviceId = await Application.getIosIdForVendorAsync() || 'unknown';
+        }
+    } catch(e) {}
+
     if (profile.branch_lat && profile.branch_lng) {
         if (distance === null) return;
         if (distance > ALLOWED_DISTANCE_METERS) {
@@ -210,7 +223,8 @@ export default function App() {
             body: JSON.stringify({ 
                 log_type: actionType,
                 latitude: location?.coords.latitude,
-                longitude: location?.coords.longitude
+                longitude: location?.coords.longitude,
+                device_id: deviceId
             }),
             credentials: 'include'
         });

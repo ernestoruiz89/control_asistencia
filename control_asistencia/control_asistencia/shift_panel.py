@@ -630,17 +630,29 @@ def get_mobile_profile():
     }
 
 @frappe.whitelist()
-def record_mobile_checkin(log_type, latitude=None, longitude=None):
+def record_mobile_checkin(log_type, latitude=None, longitude=None, device_id=None):
     if frappe.session.user == "Guest":
         frappe.throw(_("Not logged in"), frappe.AuthenticationError)
         
-    employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
-    if not employee:
+    emp_data = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, ["name", "attendance_device_id"], as_dict=True)
+    if not emp_data:
         frappe.throw(_("No employee linked to your account."))
         
+    employee_id = emp_data["name"]
+    
+    # ── Validación de Dispositivo (MAC/Device ID) ──
+    if emp_data.get("attendance_device_id"):
+        if emp_data.get("attendance_device_id") != device_id:
+            frappe.throw("Seguridad: Este dispositivo no está autorizado para este usuario. Tu dispositivo enlazado es diferente.")
+    else:
+        # Auto-enroll si no tiene dispositivo 
+        if device_id and device_id != 'unknown':
+            frappe.db.set_value("Employee", employee_id, "attendance_device_id", device_id)
+            frappe.db.commit()
+            
     doc = frappe.get_doc({
         "doctype": "Employee Checkin",
-        "employee": employee,
+        "employee": employee_id,
         "log_type": log_type,
         "time": frappe.utils.now(),
         "latitude": latitude,
