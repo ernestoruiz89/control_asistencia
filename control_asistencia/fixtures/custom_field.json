@@ -21,5 +21,29 @@
         "label": "Identificación",
         "insert_after": "salutation",
         "translatable": 0
+    },
+    {
+        "name": "Branch-custom_latitud",
+        "doctype": "Custom Field",
+        "dt": "Branch",
+        "module": "Control Asistencia",
+        "fieldname": "custom_latitud",
+        "fieldtype": "Float",
+        "label": "Latitud",
+        "insert_after": "branch",
+        "translatable": 0,
+        "precision": "6"
+    },
+    {
+        "name": "Branch-custom_longitud",
+        "doctype": "Custom Field",
+        "dt": "Branch",
+        "module": "Control Asistencia",
+        "fieldname": "custom_longitud",
+        "fieldtype": "Float",
+        "label": "Longitud",
+        "insert_after": "custom_latitud",
+        "translatable": 0,
+        "precision": "6"
     }
 ]
