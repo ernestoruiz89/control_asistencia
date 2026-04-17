@@ -923,7 +923,18 @@ function showEditEmployeeDialog(employeeName) {
                     { fieldname: 'branch', fieldtype: 'Link', options: 'Branch', label: __('Sucursal (Branch)'), default: emp.branch },
                     { fieldtype: 'Section Break' },
                     { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
-                    { fieldtype: 'HTML', fieldname: 'btn_unlink' }
+                    { fieldtype: 'HTML', fieldname: 'btn_unlink' },
+                    // ── Cambio de contraseña ──
+                    { fieldtype: 'Section Break', label: __('Cambiar Contraseña') },
+                    {
+                        fieldname: 'new_password',
+                        fieldtype: 'Password',
+                        label: __('Nueva Contraseña'),
+                        description: emp.user_id
+                            ? __('Usuario vinculado: {0}. Dejá vacío para no cambiarla.', [emp.user_id])
+                            : __('Este empleado no tiene usuario del sistema vinculado.'),
+                        read_only: emp.user_id ? 0 : 1,
+                    },
                 ],
                 primary_action_label: __('Guardar Cambios'),
                 primary_action: function(values) {
@@ -940,9 +951,28 @@ function showEditEmployeeDialog(employeeName) {
                         args: { doctype: 'Employee', name: employeeName, fieldname: db_values },
                         freeze: true,
                         callback: function() {
-                            frappe.show_alert({ message: __('Estado actualizado.'), indicator: 'green' });
-                            dialog.hide();
-                            loadData(); // Reload grid strictly to reflect status changes indirectly
+                            // Si se ingresó una nueva contraseña y el empleado tiene usuario vinculado
+                            if (values.new_password && emp.user_id) {
+                                frappe.call({
+                                    method: 'frappe.client.set_value',
+                                    args: {
+                                        doctype: 'User',
+                                        name: emp.user_id,
+                                        fieldname: 'new_password',
+                                        value: values.new_password,
+                                    },
+                                    freeze: true,
+                                    callback: function() {
+                                        frappe.show_alert({ message: __('Datos y contraseña actualizados.'), indicator: 'green' });
+                                        dialog.hide();
+                                        loadData();
+                                    }
+                                });
+                            } else {
+                                frappe.show_alert({ message: __('Datos actualizados.'), indicator: 'green' });
+                                dialog.hide();
+                                loadData();
+                            }
                         }
                     });
                 }
