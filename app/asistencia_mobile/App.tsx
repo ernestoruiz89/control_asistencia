@@ -20,7 +20,6 @@ import { getDistance } from 'geolib';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
-const ALLOWED_DISTANCE_METERS = 20;
 
 export default function App() {
   // --------- ESTADOS DE AUTENTICACION Y PERFIL ---------
@@ -204,8 +203,9 @@ export default function App() {
 
     if (profile.branch_lat && profile.branch_lng) {
         if (distance === null) return;
-        if (distance > ALLOWED_DISTANCE_METERS) {
-            Alert.alert('Fuera de rango', `Estás a ${distance} metros. Necesitas estar a menos de ${ALLOWED_DISTANCE_METERS}m de tu sucursal.`);
+        const allowed_dist = profile.max_distance ?? 20;
+        if (distance > allowed_dist) {
+            Alert.alert('Fuera de rango', `Estás a ${distance} metros. Necesitas estar a menos de ${allowed_dist}m de tu sucursal.`);
             return;
         }
     } else {
@@ -323,7 +323,8 @@ export default function App() {
   }
 
   // --------- RENDER PRINCIPAL ---------
-  const canAction = !profile.branch_lat || (distance !== null && distance <= ALLOWED_DISTANCE_METERS);
+  const allowed_dist = profile.max_distance ?? 20;
+  const canAction = !profile.branch_lat || (distance !== null && distance <= allowed_dist);
   const status = profile.last_log_type === 'IN' ? 'checked-in' : 'checked-out';
 
   return (
@@ -374,7 +375,7 @@ export default function App() {
               </Text>
               {!canAction && (
                 <Text style={styles.warningText}>
-                  Debes acercarte a {ALLOWED_DISTANCE_METERS}m para registrarte.
+                  Debes acercarte a {allowed_dist}m para registrarte.
                 </Text>
               )}
             </View>

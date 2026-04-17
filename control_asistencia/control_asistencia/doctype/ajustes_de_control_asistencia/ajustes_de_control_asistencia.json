@@ -5,7 +5,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "require_geolocation"
+  "require_geolocation",
+  "max_distance_meters"
  ],
  "fields": [
   {
@@ -14,6 +15,13 @@
    "fieldtype": "Check",
    "label": "Require Geolocation",
    "translatable": 0
+  },
+  {
+   "default": "20",
+   "description": "Distancia máxima en metros permitida para registrar asistencia",
+   "fieldname": "max_distance_meters",
+   "fieldtype": "Int",
+   "label": "Distancia Máxima (Metros)"
   }
  ],
  "index_web_pages_for_search": 0,
