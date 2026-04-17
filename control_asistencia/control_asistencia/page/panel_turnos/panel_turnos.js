@@ -826,6 +826,12 @@ function showAddEmployeeDialog() {
                     default: defaultJoining,
                     description: __('Por defecto: 1 de enero del presente año.'),
                 },
+                {
+                    fieldname: 'branch',
+                    fieldtype: 'Link',
+                    label: __('Sucursal (Branch)'),
+                    options: 'Branch',
+                },
                 { fieldtype: 'Column Break' },
                 {
                     fieldname: 'department',
@@ -870,6 +876,7 @@ function showAddEmployeeDialog() {
                         date_of_joining: values.date_of_joining || defaultJoining,
                         designation:     values.designation || '',
                         department:      values.department  || '',
+                        branch:          values.branch      || '',
                         user_role:       values.user_role   || 'Employee',
                         password:        values.password    || '',
                     },

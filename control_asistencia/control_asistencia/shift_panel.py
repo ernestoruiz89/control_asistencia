@@ -529,6 +529,7 @@ def create_employee_with_user(
     date_of_joining=None,
     designation=None,
     department=None,
+    branch=None,
     user_role="Employee",
     password=None,
 ):
@@ -550,6 +551,7 @@ def create_employee_with_user(
         "date_of_joining": date_of_joining or frappe.utils.today(),
         "designation": designation or None,
         "department": department or None,
+        "branch": branch or None,
         "status": "Active",
         "company": frappe.defaults.get_defaults().get("company"),
         "gender": gender or "Male",
