@@ -216,7 +216,17 @@ export default function App() {
             Alert.alert('¡Éxito!', `Marcación de ${actionType === 'IN' ? 'Entrada' : 'Salida'} registrada correctamente.`);
             setProfile({ ...profile, last_log_type: actionType });
         } else {
-            throw new Error(data.exc_type || 'Error al guardar la marcación');
+            let errorDetalle = data.exc_type || 'Error al guardar la marcación';
+            if (data._server_messages) {
+               try {
+                  const msgs = JSON.parse(data._server_messages);
+                  if (msgs.length > 0) {
+                     const fMsg = JSON.parse(msgs[0]);
+                     if (fMsg.message) errorDetalle += ': ' + fMsg.message.replace(/<[^>]+>/g, '');
+                  }
+               } catch(ex){}
+            }
+            throw new Error(errorDetalle);
         }
     } catch (e: any) {
         Alert.alert('Error', e.message);
