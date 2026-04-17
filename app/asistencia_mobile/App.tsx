@@ -270,14 +270,13 @@ export default function App() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Correo (Usuario)</Text>
+          <Text style={styles.label}>Usuario o Correo</Text>
           <TextInput 
             style={styles.input} 
             value={email} 
             onChangeText={setEmail}
-            placeholder="ejemplo@correo.com"
+            placeholder="nombre de usuario o correo"
             placeholderTextColor="#475569"
-            keyboardType="email-address"
             autoCapitalize="none"
           />
         </View>
