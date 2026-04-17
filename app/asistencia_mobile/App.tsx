@@ -207,7 +207,11 @@ export default function App() {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({ log_type: actionType }),
+            body: JSON.stringify({ 
+                log_type: actionType,
+                latitude: location?.coords.latitude,
+                longitude: location?.coords.longitude
+            }),
             credentials: 'include'
         });
         const data = await res.json();

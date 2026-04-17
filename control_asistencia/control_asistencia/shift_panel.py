@@ -643,7 +643,8 @@ def record_mobile_checkin(log_type, latitude=None, longitude=None):
         "employee": employee,
         "log_type": log_type,
         "time": frappe.utils.now(),
-        # En el futuro, podríamos guardar las coordenadas del teléfono en la marcación
+        "latitude": latitude,
+        "longitude": longitude
     })
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
