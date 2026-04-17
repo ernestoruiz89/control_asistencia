@@ -101,7 +101,7 @@ export default function App() {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ usr: email, pwd: password }),
-        credentials: 'omit' // Let fetch handle it internally, wait 'include' saves cookies
+        credentials: 'include' // IMPORTANTE: Guarda la cookie 'sid' de Frappe
       });
 
       const data = await res.json();
@@ -123,7 +123,8 @@ export default function App() {
   const getProfile = async (url: string) => {
     try {
       const res = await fetch(`${url}/api/method/control_asistencia.control_asistencia.shift_panel.get_mobile_profile`, {
-        headers: { 'Accept': 'application/json' }
+        headers: { 'Accept': 'application/json' },
+        credentials: 'include'
       });
       const data = await res.json();
       console.log("Perfil: ", data);
@@ -144,7 +145,7 @@ export default function App() {
 
   const logout = async () => {
     try {
-      await fetch(`${siteUrl}/api/method/logout`);
+      await fetch(`${siteUrl}/api/method/logout`, { credentials: 'include' });
       setSessionActive(false);
       setProfile(null);
     } catch(e) { }
@@ -206,7 +207,8 @@ export default function App() {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({ log_type: actionType })
+            body: JSON.stringify({ log_type: actionType }),
+            credentials: 'include'
         });
         const data = await res.json();
         
