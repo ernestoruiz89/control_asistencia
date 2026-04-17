@@ -925,7 +925,7 @@ function showEditEmployeeDialog(employeeName) {
                     { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
                     { fieldtype: 'HTML', fieldname: 'btn_unlink' },
                     // ── Cambio de contraseña ──
-                    { fieldtype: 'Section Break', label: __('Cambiar Contraseña') },
+                    { fieldtype: 'Section Break', label: __('Acceso al Sistema') },
                     {
                         fieldname: 'new_password',
                         fieldtype: 'Password',
@@ -935,6 +935,16 @@ function showEditEmployeeDialog(employeeName) {
                             : __('Este empleado no tiene usuario del sistema vinculado.'),
                         read_only: emp.user_id ? 0 : 1,
                     },
+                    {
+                        fieldname: 'disable_user',
+                        fieldtype: 'Check',
+                        label: __('Desactivar usuario del sistema'),
+                        default: (emp.user_id && emp.status !== 'Active') ? 1 : 0,
+                        read_only: emp.user_id ? 0 : 1,
+                        description: emp.user_id
+                            ? __('Si está marcado, el usuario no podrá ingresar al sistema.')
+                            : __('Sin usuario vinculado. No aplica.'),
+                    },
                 ],
                 primary_action_label: __('Guardar Cambios'),
                 primary_action: function(values) {
@@ -942,37 +952,49 @@ function showEditEmployeeDialog(employeeName) {
                         frappe.msgprint(__('La <b>Fecha de Salida</b> es requerida cuando el estado es "Left".'));
                         return;
                     }
+                    // Separar campos que no van al Employee
+                    const new_password = values.new_password || '';
+                    const disable_user = values.disable_user;
                     let db_values = Object.assign({}, values);
+                    delete db_values.new_password;
+                    delete db_values.disable_user;
                     if (db_values.status !== 'Left') {
                         db_values.relieving_date = null;
                     }
+
                     frappe.call({
                         method: 'frappe.client.set_value',
                         args: { doctype: 'Employee', name: employeeName, fieldname: db_values },
                         freeze: true,
                         callback: function() {
-                            // Si se ingresó una nueva contraseña y el empleado tiene usuario vinculado
-                            if (values.new_password && emp.user_id) {
-                                frappe.call({
-                                    method: 'frappe.client.set_value',
-                                    args: {
-                                        doctype: 'User',
-                                        name: emp.user_id,
-                                        fieldname: 'new_password',
-                                        value: values.new_password,
-                                    },
-                                    freeze: true,
-                                    callback: function() {
-                                        frappe.show_alert({ message: __('Datos y contraseña actualizados.'), indicator: 'green' });
-                                        dialog.hide();
-                                        loadData();
-                                    }
-                                });
-                            } else {
+                            if (!emp.user_id) {
                                 frappe.show_alert({ message: __('Datos actualizados.'), indicator: 'green' });
                                 dialog.hide();
                                 loadData();
+                                return;
                             }
+
+                            // Construir los campos a actualizar en el User
+                            const userFields = { enabled: disable_user ? 0 : 1 };
+                            if (new_password) userFields.new_password = new_password;
+
+                            frappe.call({
+                                method: 'frappe.client.set_value',
+                                args: {
+                                    doctype: 'User',
+                                    name: emp.user_id,
+                                    fieldname: userFields,
+                                },
+                                freeze: true,
+                                callback: function() {
+                                    const msg = new_password
+                                        ? __('Datos, contraseña y acceso actualizados.')
+                                        : __('Datos y acceso al sistema actualizados.');
+                                    frappe.show_alert({ message: msg, indicator: 'green' });
+                                    dialog.hide();
+                                    loadData();
+                                }
+                            });
                         }
                     });
                 }
