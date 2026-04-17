@@ -341,7 +341,7 @@ export default function App() {
               status === 'checked-in' ? styles.dotGreen : styles.dotGray
             ]} />
             <Text style={styles.statusText}>
-              {status === 'checked-in' ? 'Turno Activo (Check-IN)' : 'Turno Finalizado'}
+              {status === 'checked-in' ? 'Turno Activo (Check-IN)' : 'Sin turno activo'}
             </Text>
           </View>
           
