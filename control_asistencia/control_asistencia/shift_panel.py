@@ -519,6 +519,77 @@ def cancel_leave(leave_name):
     return {"name": doc.name}
 
 
+@frappe.whitelist()
+def create_employee_with_user(
+    first_name,
+    last_name=None,
+    email=None,
+    date_of_birth=None,
+    date_of_joining=None,
+    designation=None,
+    department=None,
+    user_role="Employee",
+    password=None,
+):
+    """Alta Rápida de Empleado.
+
+    Creates an Employee record and, when *email* is supplied, ensures a
+    matching User account exists (creates one if it doesn't).  The User is
+    linked to the employee via the ``user_id`` field.
+
+    Returns ``{"employee": name, "user": email_or_None, "user_created": bool}``.
+    """
+    # ── 1. Create the Employee ──────────────────────────────────────────────
+    emp_doc = frappe.get_doc({
+        "doctype": "Employee",
+        "first_name": first_name,
+        "last_name": last_name or "",
+        "employee_name": (first_name + (" " + last_name if last_name else "")).strip(),
+        "date_of_birth": date_of_birth or None,
+        "date_of_joining": date_of_joining or frappe.utils.today(),
+        "designation": designation or None,
+        "department": department or None,
+        "status": "Active",
+        "company": frappe.defaults.get_defaults().get("company"),
+        "gender": "Male",  # default; can be updated later
+    })
+    if email:
+        emp_doc.prefered_email = email
+
+    emp_doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    # ── 2. Ensure a User exists for this email ──────────────────────────────
+    user_created = False
+    if email:
+        email = email.strip().lower()
+        if not frappe.db.exists("User", email):
+            user_doc = frappe.get_doc({
+                "doctype": "User",
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name or "",
+                "send_welcome_email": 0,
+                "user_type": "System User",
+                "roles": [{"role": user_role}],
+            })
+            if password:
+                user_doc.new_password = password
+            user_doc.insert(ignore_permissions=True)
+            user_created = True
+
+        # Link employee → user
+        frappe.db.set_value("Employee", emp_doc.name, "user_id", email)
+        frappe.db.commit()
+
+    return {
+        "employee": emp_doc.name,
+        "employee_name": emp_doc.employee_name,
+        "user": email if email else None,
+        "user_created": user_created,
+    }
+
+
 def notify_shift_panel_update(doc, method):
     """Publish a realtime event when a related document is modified."""
     frappe.publish_realtime("update_shift_panel")

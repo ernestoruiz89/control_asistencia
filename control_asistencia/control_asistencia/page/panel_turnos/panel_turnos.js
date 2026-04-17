@@ -731,42 +731,155 @@ function _buildDayDialog(employee, employeeName, date, details) {
 }
 
 function showAddEmployeeDialog() {
-    const dialog = new frappe.ui.Dialog({
-        title: __('Agregar Empleado'),
-        fields: [
-            { fieldname: 'first_name', fieldtype: 'Data', label: __('Primer Nombre'), reqd: 1 },
-            { fieldname: 'middle_name', fieldtype: 'Data', label: __('Segundo Nombre') },
-            { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos') },
-            { fieldname: 'date_of_birth', fieldtype: 'Date', label: __('Fecha de Nacimiento'), reqd: 1 },
-            { fieldtype: 'Column Break' },
-            { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación'), reqd: 1 },
-            { fieldname: 'gender', fieldtype: 'Select', label: __('Género'), options: '\nMale\nFemale\nOther', reqd: 1 },
-            { fieldtype: 'Section Break' },
-            { fieldname: 'date_of_joining', fieldtype: 'Date', label: __('Fecha de Ingreso'), reqd: 1, default: frappe.datetime.get_today() },
-            { fieldtype: 'Column Break' },
-            { fieldname: 'branch', fieldtype: 'Link', options: 'Branch', label: __('Sucursal (Branch)') }
-        ],
-        primary_action_label: __('Guardar Empleado'),
-        primary_action: function(values) {
-            frappe.call({
-                method: 'frappe.client.insert',
-                args: {
-                    doc: Object.assign(values, { doctype: 'Employee', status: 'Active' })
-                },
-                freeze: true,
-                freeze_message: __('Creando empleado...'),
-                callback: function(r) {
-                    if (!r.exc) {
-                        frappe.show_alert({ message: __('Empleado creado exitosamente.'), indicator: 'green' });
-                        dialog.hide();
-                        loadData(); // Refresh grid to show new employee
-                    }
-                }
-            });
-        }
-    });
+    // Fetch designations and departments first, then build the dialog
+    Promise.all([
+        frappe.db.get_list('Designation', { fields: ['name'], limit: 200, order_by: 'name asc' }),
+        frappe.db.get_list('Department',  { fields: ['name'], limit: 200, order_by: 'name asc' }),
+    ]).then(([designations, departments]) => {
+        const desigOptions = [{ label: __('— Seleccionar —'), value: '' }]
+            .concat(designations.map(d => ({ label: d.name, value: d.name })));
+        const deptOptions  = [{ label: __('— Seleccionar —'), value: '' }]
+            .concat(departments.map(d => ({ label: d.name, value: d.name })));
 
-    dialog.show();
+        const roleOptions = [
+            { label: __('Personal (Solo consulta)'), value: 'Employee'    },
+            { label: __('Supervisor'),                value: 'HR User'    },
+            { label: __('Administrador RRHH'),        value: 'HR Manager' },
+            { label: __('Administrador Sistema'),     value: 'System Manager' },
+        ];
+
+        // Compute default joining date = Jan 1 of current year
+        const today = new Date();
+        const defaultJoining = today.getFullYear() + '-01-01';
+
+        const dialog = new frappe.ui.Dialog({
+            title: __('Alta Rápida de Empleado'),
+            size: 'large',
+            fields: [
+                // ── Intro banner ──
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `<div style="
+                        background: #f0f4ff;
+                        border-left: 4px solid #4a6cf7;
+                        border-radius: 4px;
+                        padding: 10px 14px;
+                        margin-bottom: 4px;
+                        font-size: 13px;
+                        color: #4a5568;
+                    ">
+                        ${__('Se crearán automáticamente los perfiles de usuario del sistema y HR vinculados.')}
+                    </div>`,
+                },
+
+                // ── Datos Personales ──
+                { fieldtype: 'Section Break', label: __('DATOS PERSONALES'), collapsible: 0 },
+                {
+                    fieldname: 'first_name',
+                    fieldtype: 'Data',
+                    label: __('Nombres'),
+                    reqd: 1,
+                },
+                {
+                    fieldname: 'email',
+                    fieldtype: 'Data',
+                    label: __('Correo Electrónico'),
+                    description: __('Se usará como usuario de ingreso al sistema.'),
+                },
+                { fieldtype: 'Column Break' },
+                {
+                    fieldname: 'last_name',
+                    fieldtype: 'Data',
+                    label: __('Apellidos'),
+                },
+                {
+                    fieldname: 'date_of_birth',
+                    fieldtype: 'Date',
+                    label: __('Fecha de Nacimiento'),
+                },
+
+                // ── Información Laboral ──
+                { fieldtype: 'Section Break', label: __('INFORMACIÓN LABORAL'), collapsible: 0 },
+                {
+                    fieldname: 'designation',
+                    fieldtype: 'Select',
+                    label: __('Cargo'),
+                    options: desigOptions,
+                },
+                {
+                    fieldname: 'date_of_joining',
+                    fieldtype: 'Date',
+                    label: __('Fecha de Ingreso'),
+                    default: defaultJoining,
+                    description: __('Por defecto: 1 de enero del presente año.'),
+                },
+                { fieldtype: 'Column Break' },
+                {
+                    fieldname: 'department',
+                    fieldtype: 'Select',
+                    label: __('Departamento'),
+                    options: deptOptions,
+                },
+
+                // ── Configuración de Acceso ──
+                { fieldtype: 'Section Break', label: __('CONFIGURACIÓN DE ACCESO'), collapsible: 0 },
+                {
+                    fieldname: 'user_role',
+                    fieldtype: 'Select',
+                    label: __('Rol en el Sistema'),
+                    options: roleOptions,
+                    default: 'Employee',
+                    description: __('Define el nivel de acceso del empleado en el sistema.'),
+                },
+                { fieldtype: 'Column Break' },
+                {
+                    fieldname: 'password',
+                    fieldtype: 'Password',
+                    label: __('Contraseña de Acceso'),
+                    description: __('Si se deja vacío, el empleado deberá solicitar su contraseña.'),
+                },
+            ],
+            primary_action_label: __('Crear Empleado'),
+            primary_action(values) {
+                if (!values.first_name) {
+                    frappe.msgprint(__('El campo <b>Nombres</b> es obligatorio.'));
+                    return;
+                }
+
+                frappe.call({
+                    method: `${API}.create_employee_with_user`,
+                    args: {
+                        first_name:      values.first_name || '',
+                        last_name:       values.last_name  || '',
+                        email:           values.email      || '',
+                        date_of_birth:   values.date_of_birth   || '',
+                        date_of_joining: values.date_of_joining || defaultJoining,
+                        designation:     values.designation || '',
+                        department:      values.department  || '',
+                        user_role:       values.user_role   || 'Employee',
+                        password:        values.password    || '',
+                    },
+                    freeze: true,
+                    freeze_message: __('Creando empleado...'),
+                    callback({ message: res }) {
+                        if (!res) return;
+                        dialog.hide();
+                        let msg = __('Empleado <b>{0}</b> creado exitosamente.', [res.employee_name]);
+                        if (res.user_created) {
+                            msg += '<br>' + __('Usuario del sistema creado: <b>{0}</b>', [res.user]);
+                        } else if (res.user && !res.user_created) {
+                            msg += '<br>' + __('El usuario <b>{0}</b> ya existía y fue vinculado.', [res.user]);
+                        }
+                        frappe.msgprint({ title: __('¡Empleado Creado!'), message: msg, indicator: 'green' });
+                        loadData();
+                    },
+                });
+            },
+        });
+
+        dialog.show();
+    });
 }
 
 function showEditEmployeeDialog(employeeName) {
