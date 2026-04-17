@@ -24,7 +24,7 @@ const ALLOWED_DISTANCE_METERS = 20;
 
 export default function App() {
   // --------- ESTADOS DE AUTENTICACION Y PERFIL ---------
-  const [siteUrl, setSiteUrl] = useState('https://tools.findenicaragua.com');
+  const [siteUrl, setSiteUrl] = useState('https://dr.bizontec.com');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(true);
