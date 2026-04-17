@@ -524,6 +524,7 @@ def create_employee_with_user(
     first_name,
     last_name=None,
     email=None,
+    gender=None,
     date_of_birth=None,
     date_of_joining=None,
     designation=None,
@@ -551,7 +552,7 @@ def create_employee_with_user(
         "department": department or None,
         "status": "Active",
         "company": frappe.defaults.get_defaults().get("company"),
-        "gender": "Male",  # default; can be updated later
+        "gender": gender or "Male",
     })
     if email:
         emp_doc.prefered_email = email

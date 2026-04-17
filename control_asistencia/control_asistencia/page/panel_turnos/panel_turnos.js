@@ -798,6 +798,18 @@ function showAddEmployeeDialog() {
                     fieldtype: 'Date',
                     label: __('Fecha de Nacimiento'),
                 },
+                {
+                    fieldname: 'gender',
+                    fieldtype: 'Select',
+                    label: __('Género'),
+                    reqd: 1,
+                    options: [
+                        { label: __('— Seleccionar —'), value: '' },
+                        { label: __('Masculino'),        value: 'Male'   },
+                        { label: __('Femenino'),         value: 'Female' },
+                        { label: __('Otro'),             value: 'Other'  },
+                    ],
+                },
 
                 // ── Información Laboral ──
                 { fieldtype: 'Section Break', label: __('INFORMACIÓN LABORAL'), collapsible: 0 },
@@ -853,6 +865,7 @@ function showAddEmployeeDialog() {
                         first_name:      values.first_name || '',
                         last_name:       values.last_name  || '',
                         email:           values.email      || '',
+                        gender:          values.gender     || '',
                         date_of_birth:   values.date_of_birth   || '',
                         date_of_joining: values.date_of_joining || defaultJoining,
                         designation:     values.designation || '',
