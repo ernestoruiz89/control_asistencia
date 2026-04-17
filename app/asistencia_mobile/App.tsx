@@ -8,97 +8,294 @@ import {
   Dimensions,
   Animated,
   Easing,
-  StatusBar
+  StatusBar,
+  TextInput,
+  Alert
 } from 'react-native';
 import * as Location from 'expo-location';
 import { getDistance } from 'geolib';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
-
-// Mock data (en producción, esto vendría del API de Frappe según el branch del empleado)
-const SUCURSAL_LOCATION = {
-  latitude: 12.1364, // Ejemplo: Managua
-  longitude: -86.2514,
-};
-
 const ALLOWED_DISTANCE_METERS = 20;
 
 export default function App() {
+  // --------- ESTADOS DE AUTENTICACION Y PERFIL ---------
+  const [siteUrl, setSiteUrl] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [sessionActive, setSessionActive] = useState(false);
+  
+  const [profile, setProfile] = useState<any>(null);
+  
+  // --------- ESTADOS DE GEOLOCALIZACION ---------
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isChecking, setIsChecking] = useState(false);
-  const [status, setStatus] = useState<'pending' | 'checked-in' | 'checked-out'>('pending');
+  const [isCheckingLoc, setIsCheckingLoc] = useState(false);
 
-  // Animation values
+  // Animación status
   const pulseAnim = useState(new Animated.Value(1))[0];
 
   useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('El permiso para acceder a la ubicación fue denegado.');
-        return;
-      }
-
-      await updateLocation();
-    })();
+    checkLocalSession();
   }, []);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        })
-      ])
-    ).start();
-  }, [pulseAnim]);
+    if (sessionActive && profile) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          })
+        ])
+      ).start();
+      
+      startLocationSequence();
+    }
+  }, [sessionActive, profile]);
+
+  const checkLocalSession = async () => {
+    try {
+      const savedUrl = await AsyncStorage.getItem('SITE_URL');
+      if (savedUrl) {
+        setSiteUrl(savedUrl);
+        await getProfile(savedUrl); // intentamos usar la cookie almacenada por RN
+      } else {
+        setIsCheckingSession(false);
+      }
+    } catch (e) {
+      setIsCheckingSession(false);
+    }
+  };
+
+  const login = async () => {
+    if (!siteUrl || !email || !password) {
+      Alert.alert('Error', 'Por favor llena todos los campos');
+      return;
+    }
+    
+    // Format URL (remove trailing slash)
+    const formattedUrl = siteUrl.replace(/\/$/, "");
+    await AsyncStorage.setItem('SITE_URL', formattedUrl);
+    setSiteUrl(formattedUrl);
+
+    setIsLoggingIn(true);
+    try {
+      console.log(`Llamando: ${formattedUrl}/api/method/login`);
+      const res = await fetch(`${formattedUrl}/api/method/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ usr: email, pwd: password }),
+        credentials: 'omit' // Let fetch handle it internally, wait 'include' saves cookies
+      });
+
+      const data = await res.json();
+      
+      if (res.ok && data.message === "Logged In") {
+        console.log("Login exitoso, obteniendo perfil...");
+        await getProfile(formattedUrl);
+      } else {
+        Alert.alert('Error de inicio de sesión', data.message || 'Credenciales inválidas');
+      }
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert('Error de conexión', e.message);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const getProfile = async (url: string) => {
+    try {
+      const res = await fetch(`${url}/api/method/control_asistencia.control_asistencia.shift_panel.get_mobile_profile`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      console.log("Perfil: ", data);
+      if (data.message && data.message.employee_id) {
+        setProfile(data.message);
+        setSessionActive(true);
+      } else {
+        // Falló obtener el perfil (probablemente sesión expirada)
+        setSessionActive(false);
+      }
+    } catch (e) {
+      console.error("Error perfil", e);
+      setSessionActive(false);
+    } finally {
+      setIsCheckingSession(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await fetch(`${siteUrl}/api/method/logout`);
+      setSessionActive(false);
+      setProfile(null);
+    } catch(e) { }
+  };
+
+  const startLocationSequence = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setErrorMsg('El permiso para acceder a la ubicación fue denegado. Actívalo en la configuración de la App.');
+      return;
+    }
+    await updateLocation();
+  };
 
   const updateLocation = async () => {
-    setIsChecking(true);
+    if (!profile) return;
+    setIsCheckingLoc(true);
+    setErrorMsg(null);
     try {
       let currentLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
       setLocation(currentLocation);
 
-      const dist = getDistance(
-        { latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude },
-        { latitude: SUCURSAL_LOCATION.latitude, longitude: SUCURSAL_LOCATION.longitude }
-      );
-      setDistance(dist);
+      if (profile.branch_lat && profile.branch_lng) {
+        const dist = getDistance(
+          { latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude },
+          { latitude: profile.branch_lat, longitude: profile.branch_lng }
+        );
+        setDistance(dist);
+      } else {
+        setDistance(null);
+      }
     } catch (e) {
-      setErrorMsg('No se pudo obtener la ubicación.');
+      setErrorMsg('No se pudo obtener la ubicación actual.');
     } finally {
-      setIsChecking(false);
+      setIsCheckingLoc(false);
     }
   };
 
-  const handleAction = async (actionType: 'check-in' | 'check-out') => {
+  const handleCheckInOut = async (actionType: 'IN' | 'OUT') => {
     await updateLocation();
-    
-    if (distance === null) return;
 
-    if (distance > ALLOWED_DISTANCE_METERS) {
-        alert(`Estás a ${distance} metros. Necesitas estar a menos de ${ALLOWED_DISTANCE_METERS}m de la sucursal.`);
-        return;
+    if (profile.branch_lat && profile.branch_lng) {
+        if (distance === null) return;
+        if (distance > ALLOWED_DISTANCE_METERS) {
+            Alert.alert('Fuera de rango', `Estás a ${distance} metros. Necesitas estar a menos de ${ALLOWED_DISTANCE_METERS}m de tu sucursal.`);
+            return;
+        }
+    } else {
+        Alert.alert('Advertencia', 'Tu sucursal no tiene coordenadas GPS configuradas. La marcación procederá sin validación de geocerca.');
     }
 
-    // Si tuvieramos backend, aquí llamaríamos al API.
-    setStatus(actionType === 'check-in' ? 'checked-in' : 'checked-out');
+    try {
+        setIsCheckingLoc(true);
+        const res = await fetch(`${siteUrl}/api/method/control_asistencia.control_asistencia.shift_panel.record_mobile_checkin`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ log_type: actionType })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.message) {
+            Alert.alert('¡Éxito!', `Marcación de ${actionType === 'IN' ? 'Entrada' : 'Salida'} registrada correctamente.`);
+            setProfile({ ...profile, last_log_type: actionType });
+        } else {
+            throw new Error(data.exc_type || 'Error al guardar la marcación');
+        }
+    } catch (e: any) {
+        Alert.alert('Error', e.message);
+    } finally {
+        setIsCheckingLoc(false);
+    }
   };
 
-  const canAction = distance !== null && distance <= ALLOWED_DISTANCE_METERS;
+
+  // --------- RENDER CARGANDO ---------
+  if (isCheckingSession) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+        <ActivityIndicator size="large" color="#6366f1" />
+      </View>
+    );
+  }
+
+  // --------- RENDER LOGIN ---------
+  if (!sessionActive) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', padding: 30 }]}>
+        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+        <Text style={[styles.title, { textAlign: 'center', marginBottom: 40 }]}>Asistencia ERP</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Servidor ERPNext (Ej. https://mi-erp.com)</Text>
+          <TextInput 
+            style={styles.input} 
+            value={siteUrl} 
+            onChangeText={setSiteUrl}
+            placeholder="URL del sistema"
+            placeholderTextColor="#475569"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Correo (Usuario)</Text>
+          <TextInput 
+            style={styles.input} 
+            value={email} 
+            onChangeText={setEmail}
+            placeholder="ejemplo@correo.com"
+            placeholderTextColor="#475569"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Contraseña</Text>
+          <TextInput 
+            style={styles.input} 
+            value={password} 
+            onChangeText={setPassword}
+            placeholder="********"
+            placeholderTextColor="#475569"
+            secureTextEntry
+          />
+        </View>
+
+        <TouchableOpacity 
+          style={[styles.btnAction, { backgroundColor: '#6366f1', marginTop: 20 }]} 
+          onPress={login}
+          disabled={isLoggingIn}
+        >
+          {isLoggingIn ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.btnText}>Iniciar Sesión</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // --------- RENDER PRINCIPAL ---------
+  const canAction = !profile.branch_lat || (distance !== null && distance <= ALLOWED_DISTANCE_METERS);
+  const status = profile.last_log_type === 'IN' ? 'checked-in' : 'checked-out';
 
   return (
     <View style={styles.container}>
@@ -106,10 +303,16 @@ export default function App() {
       
       {/* HEADER TIPO PREMIUM */}
       <View style={styles.header}>
-        <Text style={styles.title}>Control de Asistencia</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.title}>Panel de Control</Text>
+          <TouchableOpacity onPress={logout}>
+            <Text style={{ color: '#f43f5e', fontWeight: 'bold' }}>Salir</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={{ color: '#94a3b8', fontSize: 16 }}>Hola, {profile.employee_name}</Text>
         <View style={styles.branchContainer}>
           <Text style={styles.branchLabel}>Sucursal Asignada</Text>
-          <Text style={styles.branchText}>Managua Principal</Text>
+          <Text style={styles.branchText}>{profile.branch || 'Sin sucursal'}</Text>
         </View>
       </View>
 
@@ -119,20 +322,20 @@ export default function App() {
         <Animated.View style={[styles.statusCard, { transform: [{ scale: pulseAnim }] }]}>
           <View style={styles.indicatorContainer}>
             <View style={[styles.dot, 
-              status === 'checked-in' ? styles.dotGreen : 
-              status === 'checked-out' ? styles.dotRed : styles.dotGray
+              status === 'checked-in' ? styles.dotGreen : styles.dotGray
             ]} />
             <Text style={styles.statusText}>
-              {status === 'pending' ? 'Esperando Acción' : 
-               status === 'checked-in' ? 'Turno Activo' : 'Turno Finalizado'}
+              {status === 'checked-in' ? 'Turno Activo (Check-IN)' : 'Turno Finalizado'}
             </Text>
           </View>
           
           <View style={styles.divider} />
 
           {errorMsg ? (
-            <Text style={styles.errorText}>{errorMsg}</Text>
-          ) : isChecking ? (
+             <Text style={styles.errorText}>{errorMsg}</Text>
+          ) : !profile.branch_lat ? (
+             <Text style={styles.infoText}>Esta sucursal no tiene validación GPS activa.</Text>
+          ) : isCheckingLoc ? (
             <ActivityIndicator size="small" color="#6366f1" style={{ marginVertical: 10 }} />
           ) : distance !== null ? (
             <View style={styles.distanceContainer}>
@@ -158,8 +361,8 @@ export default function App() {
         {/* ACCIONES */}
         <View style={styles.actionContainer}>
           <TouchableOpacity 
-            style={[styles.btnAction, styles.btnIn, !canAction && styles.btnDisabled]} 
-            onPress={() => handleAction('check-in')}
+            style={[styles.btnAction, styles.btnIn, (!canAction || status === 'checked-in') && styles.btnDisabled]} 
+            onPress={() => handleCheckInOut('IN')}
             activeOpacity={0.8}
             disabled={!canAction || status === 'checked-in'}
           >
@@ -167,8 +370,8 @@ export default function App() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.btnAction, styles.btnOut, !canAction && styles.btnDisabled]} 
-            onPress={() => handleAction('check-out')}
+            style={[styles.btnAction, styles.btnOut, (!canAction || status === 'checked-out') && styles.btnDisabled]} 
+            onPress={() => handleCheckInOut('OUT')}
             activeOpacity={0.8}
             disabled={!canAction || status === 'checked-out'}
           >
@@ -206,6 +409,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
     marginBottom: 5,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    color: '#cbd5e1',
+    fontWeight: '600',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  input: {
+    backgroundColor: '#1e293b',
+    color: '#f8fafc',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    fontSize: 16,
   },
   branchContainer: {
     marginTop: 15,

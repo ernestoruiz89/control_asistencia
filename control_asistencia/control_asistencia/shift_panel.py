@@ -593,6 +593,62 @@ def create_employee_with_user(
     }
 
 
+@frappe.whitelist()
+def get_mobile_profile():
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+        
+    employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, ["name", "employee_name", "branch"], as_dict=True)
+    if not employee:
+        frappe.throw(_("No hay ningún Empleado vinculado a tu cuenta de usuario."))
+        
+    # Get Branch details
+    branch_data = {}
+    if employee.get("branch"):
+        branch_data = frappe.db.get_value(
+            "Branch", 
+            employee["branch"], 
+            ["name", "custom_latitud", "custom_longitud"], 
+            as_dict=True
+        ) or {}
+        
+    # Get last checkin status to determine if we should show IN or OUT
+    last_log_type = frappe.db.get_value(
+        "Employee Checkin",
+        {"employee": employee.name},
+        "log_type",
+        order_by="time desc"
+    ) or "OUT"
+        
+    return {
+        "employee_id": employee.name,
+        "employee_name": employee.employee_name,
+        "branch": branch_data.get("name"),
+        "branch_lat": branch_data.get("custom_latitud"),
+        "branch_lng": branch_data.get("custom_longitud"),
+        "last_log_type": last_log_type
+    }
+
+@frappe.whitelist()
+def record_mobile_checkin(log_type, latitude=None, longitude=None):
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+        
+    employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+    if not employee:
+        frappe.throw(_("No employee linked to your account."))
+        
+    doc = frappe.get_doc({
+        "doctype": "Employee Checkin",
+        "employee": employee,
+        "log_type": log_type,
+        "time": frappe.utils.now_datetime(),
+        # En el futuro, podríamos guardar las coordenadas del teléfono en la marcación
+    })
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return {"name": doc.name, "time": doc.time, "log_type": doc.log_type}
+
 def notify_shift_panel_update(doc, method):
     """Publish a realtime event when a related document is modified."""
     frappe.publish_realtime("update_shift_panel")
