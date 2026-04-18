@@ -68,7 +68,7 @@ export default function App() {
       
       startLocationSequence();
     }
-  }, [sessionActive, profile]);
+  }, [sessionActive]);
 
   const checkLocalSession = async () => {
     try {
