@@ -714,14 +714,35 @@ function _buildDayDialog(employee, employeeName, date, details) {
     frappe.call({
         method: `${API}.get_shift_types`,
         callback: ({ message: shifts }) => {
-            const options = [{ label: '', value: '' }].concat((shifts || []).map(s => ({
-                label: s.label || s.name,
-                value: s.name
-            })));
-            d.fields_dict.shift_type.df.options = options;
-            d.fields_dict.shift_type.refresh();
-            if (hasShift) {
-                d.set_value('shift_type', currentShifts[0].shift_type);
+            if (!shifts || shifts.length === 0) {
+                // No shift types exist — hide select and show a create button
+                d.fields_dict.shift_type.df.hidden = 1;
+                d.fields_dict.shift_type.refresh();
+                d.fields_dict.shift_type.$wrapper.after(`
+                    <div class="frappe-control" style="margin-bottom: 15px;">
+                        <label class="control-label" style="margin-bottom: 8px; display: block;">${__('Nuevo Tipo de Turno')}</label>
+                        <button class="btn btn-sm btn-primary" id="btn-create-shift-inline">
+                            <i class="fa fa-plus"></i> ${__('Crear Turno')}
+                        </button>
+                        <p class="text-muted" style="margin-top: 6px; font-size: 12px;">
+                            ${__('No hay turnos creados en el sistema. Crea uno primero para poder asignarlo.')}
+                        </p>
+                    </div>
+                `);
+                d.$wrapper.find('#btn-create-shift-inline').on('click', () => {
+                    d.hide();
+                    showCreateShiftDialog();
+                });
+            } else {
+                const options = [{ label: '', value: '' }].concat(shifts.map(s => ({
+                    label: s.label || s.name,
+                    value: s.name
+                })));
+                d.fields_dict.shift_type.df.options = options;
+                d.fields_dict.shift_type.refresh();
+                if (hasShift) {
+                    d.set_value('shift_type', currentShifts[0].shift_type);
+                }
             }
         },
     });
