@@ -719,6 +719,114 @@ def record_mobile_checkin(log_type, latitude=None, longitude=None, device_id=Non
     frappe.db.commit()
     return {"name": doc.name, "time": doc.time, "log_type": doc.log_type}
 
+def _get_attendance_data(employee, date_obj, shift_name=None):
+    """Calculate attendance status/times for an employee on a specific date."""
+    ds = str(date_obj)
+
+    # 1. Get shift (if not provided by checkin doc)
+    if not shift_name:
+        asgn = frappe.get_all(
+            "Shift Assignment",
+            filters={"employee": employee, "start_date": ["<=", ds], "end_date": [">=", ds], "docstatus": 1},
+            fields=["shift_type"],
+            limit=1
+        )
+        shift_name = asgn[0].shift_type if asgn else None
+    
+    # 2. Get shift details
+    st = None
+    if shift_name:
+        st = frappe.get_value("Shift Type", shift_name, 
+                             ["start_time", "end_time", "late_entry_grace_period", "early_exit_grace_period"], 
+                             as_dict=True)
+
+    # 3. Get checkins
+    checkins = frappe.get_all(
+        "Employee Checkin",
+        filters={"employee": employee, "time": ["between", [f"{ds} 00:00:00", f"{ds} 23:59:59"]]},
+        fields=["time", "log_type"],
+        order_by="time ASC"
+    )
+
+    first_in = None
+    last_out = None
+    for ck in checkins:
+        if ck.log_type == "IN" and first_in is None:
+            first_in = ck.time
+        if ck.log_type == "OUT":
+            last_out = ck.time
+
+    late_entry = 0
+    early_exit = 0
+    if st and st.start_time and first_in:
+        grace = int(st.late_entry_grace_period or 0)
+        shift_start_dt = datetime.combine(date_obj, (datetime.min + st.start_time).time())
+        if first_in.replace(tzinfo=None) > (shift_start_dt + timedelta(minutes=grace)):
+            late_entry = 1
+
+    if st and st.end_time and last_out:
+        grace = int(st.early_exit_grace_period or 0)
+        shift_end_dt = datetime.combine(date_obj, (datetime.min + st.end_time).time())
+        if last_out.replace(tzinfo=None) < (shift_end_dt - timedelta(minutes=grace)):
+            early_exit = 1
+
+    return {
+        "shift": shift_name,
+        "late_entry": late_entry,
+        "early_exit": early_exit,
+        "in_time": first_in,
+        "out_time": last_out,
+        "status": "Present" if first_in else "Absent"
+    }
+
+
+def sync_attendance_from_checkin(doc, method=None):
+    """Hook: auto-create/update Attendance record when a checkin is added."""
+    from frappe.utils import getdate
+    
+    employee = doc.employee
+    date_obj = getdate(doc.time)
+    
+    # Get attendance metrics, using doc.shift if available
+    data = _get_attendance_data(employee, date_obj, shift_name=doc.get("shift"))
+    
+    # Find or create Attendance
+    filters = {"employee": employee, "attendance_date": date_obj, "docstatus": ["<", 2]}
+    name = frappe.db.get_value("Attendance", filters, "name")
+    
+    if name:
+        att = frappe.get_doc("Attendance", name)
+        att.status = data["status"]
+        att.shift = data["shift"]
+        att.late_entry = data["late_entry"]
+        att.early_exit = data["early_exit"]
+        att.in_time = data["in_time"]
+        att.out_time = data["out_time"]
+        att.save(ignore_permissions=True)
+    else:
+        # Create new but only if they have at least one checkin
+        if data["status"] == "Present":
+            emp_info = frappe.db.get_value("Employee", employee, ["employee_name", "company", "department"], as_dict=True)
+            att = frappe.get_doc({
+                "doctype": "Attendance",
+                "employee": employee,
+                "employee_name": emp_info.employee_name,
+                "company": emp_info.company,
+                "department": emp_info.department,
+                "attendance_date": date_obj,
+                "status": data["status"],
+                "shift": data["shift"],
+                "late_entry": data["late_entry"],
+                "early_exit": data["early_exit"],
+                "in_time": data["in_time"],
+                "out_time": data["out_time"]
+            })
+            att.insert(ignore_permissions=True)
+    
+    frappe.db.commit()
+
+
 def notify_shift_panel_update(doc, method):
     """Publish a realtime event when a related document is modified."""
+    sync_attendance_from_checkin(doc, method)
     frappe.publish_realtime("update_shift_panel")
