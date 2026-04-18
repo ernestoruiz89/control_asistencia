@@ -297,12 +297,12 @@ export default function App() {
           />
           
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Servidor ERPNext (Ej. https://mi-erp.com)</Text>
+            <Text style={styles.label}>Servidor</Text>
             <TextInput 
               style={styles.input} 
               value={siteUrl} 
               onChangeText={setSiteUrl}
-              placeholder="URL del sistema"
+              placeholder="Ej. https://mi-erp.com"
               placeholderTextColor="#475569"
               autoCapitalize="none"
             />
