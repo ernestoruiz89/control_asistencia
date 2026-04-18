@@ -27,6 +27,7 @@ export default function App() {
   const [siteUrl, setSiteUrl] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
@@ -314,14 +315,22 @@ export default function App() {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Contraseña</Text>
-          <TextInput 
-            style={styles.input} 
-            value={password} 
-            onChangeText={setPassword}
-            placeholder="********"
-            placeholderTextColor="#475569"
-            secureTextEntry
-          />
+          <View style={{ position: 'relative', justifyContent: 'center' }}>
+            <TextInput 
+              style={styles.input} 
+              value={password} 
+              onChangeText={setPassword}
+              placeholder="********"
+              placeholderTextColor="#475569"
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity 
+              style={{ position: 'absolute', right: 15, padding: 5 }}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Text style={{ color: '#6366f1', fontWeight: 'bold' }}>{showPassword ? 'Ocultar' : 'Ver'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity 
