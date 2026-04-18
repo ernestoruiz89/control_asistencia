@@ -342,7 +342,7 @@ export default function App() {
       {/* HEADER TIPO PREMIUM */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.title}>Panel de Control</Text>
+          <Text style={styles.title}>Marcar Asistencia</Text>
           <TouchableOpacity onPress={logout}>
             <Text style={{ color: '#f43f5e', fontWeight: 'bold' }}>Salir</Text>
           </TouchableOpacity>
