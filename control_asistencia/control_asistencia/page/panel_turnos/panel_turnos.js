@@ -328,11 +328,17 @@ function applyFilterAndRender() {
 function renderGrid(data) {
     const ws = new Date(currentStartDate);
     const numDays = data.length > 0 ? data[0].days.length : (currentViewType === 'week' ? 7 : 31);
+    
+    // Identificar la fecha de hoy en formato YYYY-MM-DD
+    const todayStr = fmtDate(new Date());
 
     let headerCols = '<th class="col-employee" style="min-width: 250px;">Empleado</th>';
     for (let i = 0; i < numDays; i++) {
         const d = new Date(ws);
         d.setDate(d.getDate() + i);
+        const ds = fmtDate(d);
+        const isToday = ds === todayStr;
+        const todayClass = isToday ? 'is-today' : '';
 
         let displayDay;
         if (currentViewType === 'week') {
@@ -341,7 +347,7 @@ function renderGrid(data) {
             displayDay = d.getDate();
         }
 
-        headerCols += `<th style="min-width: 100px;">${displayDay}<br><small>${fmtShort(d)}</small></th>`;
+        headerCols += `<th class="${todayClass}" style="min-width: 100px;">${displayDay}<br><small>${fmtShort(d)}</small></th>`;
     }
 
     let rows = '';
@@ -364,7 +370,9 @@ function renderGrid(data) {
             <div style="font-weight: 600;">${emp.employee_name}${statusTag}</div>
         </td>`;
         for (const day of emp.days) {
-            const cls = 'cell-' + day.status;
+            const isToday = day.date === todayStr;
+            const todayClass = isToday ? 'is-today' : '';
+            const cls = 'cell-' + day.status + ' ' + todayClass;
             const label = day.shift || '—';
             const detail = day.detail || STATUS_LABELS[day.status] || '';
             cells += `<td class="${cls} day-cell" data-employee="${emp.employee}" data-date="${day.date}">

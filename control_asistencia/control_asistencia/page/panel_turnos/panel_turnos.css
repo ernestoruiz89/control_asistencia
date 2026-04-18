@@ -126,3 +126,15 @@
 .shift-panel-container.is-fullscreen #grid-wrapper {
     max-height: 85vh !important;
 }
+
+/* ── Highlight current day ── */
+.shift-grid th.is-today {
+    border-left: 3px solid var(--primary, #2490ef) !important;
+    border-right: 3px solid var(--primary, #2490ef) !important;
+    background: var(--bg-primary-light, #eef6ff) !important; /* Soft tint for the header */
+}
+
+.shift-grid td.is-today {
+    border-left: 3px solid var(--primary, #2490ef) !important;
+    border-right: 3px solid var(--primary, #2490ef) !important;
+}
