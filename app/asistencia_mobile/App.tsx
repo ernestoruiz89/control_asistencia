@@ -88,8 +88,12 @@ export default function App() {
       return;
     }
     
-    // Format URL (remove trailing slash)
-    const formattedUrl = siteUrl.replace(/\/$/, "");
+    // Format URL (remove trailing slash and auto-prepend https:// if missing)
+    let formattedUrl = siteUrl.trim().replace(/\/$/, "");
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+    
     await AsyncStorage.setItem('SITE_URL', formattedUrl);
     setSiteUrl(formattedUrl);
 
