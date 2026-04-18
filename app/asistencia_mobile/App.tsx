@@ -159,6 +159,8 @@ export default function App() {
       await fetch(`${siteUrl}/api/method/logout`, { credentials: 'include' });
       setSessionActive(false);
       setProfile(null);
+      setPassword('');
+      setShowPassword(false);
     } catch(e) { }
   };
 
