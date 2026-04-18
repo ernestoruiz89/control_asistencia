@@ -410,7 +410,37 @@ function showAssignShiftDialog() {
     frappe.call({
         method: `${API}.get_shift_types`,
         callback: ({ message: shifts }) => {
-            const options = (shifts || []).map(s => ({ label: s.label || s.name, value: s.name }));
+            if (!shifts || shifts.length === 0) {
+                // No shift types — prompt to create one first
+                const d = new frappe.ui.Dialog({
+                    title: __('Asignar Turno'),
+                    fields: [
+                        {
+                            fieldtype: 'HTML',
+                            options: `
+                                <div style="text-align: center; padding: 20px 10px;">
+                                    <i class="fa fa-calendar-times-o" style="font-size: 48px; color: #d5d8dc; margin-bottom: 15px;"></i>
+                                    <p style="font-size: 14px; color: #7f8c8d; margin-bottom: 20px;">
+                                        ${__('No hay turnos creados en el sistema. Crea uno primero para poder asignarlo a los empleados.')}
+                                    </p>
+                                    <button class="btn btn-primary" id="btn-create-shift-from-assign">
+                                        <i class="fa fa-plus"></i> ${__('Crear Turno')}
+                                    </button>
+                                </div>
+                            `,
+                        },
+                    ],
+                });
+                d.show();
+                d.$wrapper.find('.modal-footer').hide();
+                d.$wrapper.find('#btn-create-shift-from-assign').on('click', () => {
+                    d.hide();
+                    showCreateShiftDialog();
+                });
+                return;
+            }
+
+            const options = shifts.map(s => ({ label: s.label || s.name, value: s.name }));
 
             let defaultEndDate;
             if (currentViewType === 'month') {
@@ -445,7 +475,7 @@ function showAssignShiftDialog() {
                     let is_empty = selected.every(val => !val);
                     if (is_empty) {
                         frappe.msgprint({ title: 'Nota Informativa', message: 'Como no seleccionaste días específicos, el turno se programará sobre <b>todos los días</b> correspondientes entre la Fecha Inicial y Fecha Final de manera ininterrumpida.', indicator: 'blue' });
-                        values.days_enabled = JSON.stringify([1, 1, 1, 1, 1, 1, 1]); // Habilita completamente todos
+                        values.days_enabled = JSON.stringify([1, 1, 1, 1, 1, 1, 1]);
                     } else {
                         values.days_enabled = JSON.stringify(selected);
                     }
