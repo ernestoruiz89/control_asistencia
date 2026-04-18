@@ -138,6 +138,7 @@ export default function App() {
       if (data.message && data.message.employee_id) {
         setProfile(data.message);
         setSessionActive(true);
+        return data.message;
       } else {
         // Falló obtener el perfil (probablemente sesión expirada)
         setSessionActive(false);
@@ -148,6 +149,7 @@ export default function App() {
     } finally {
       setIsCheckingSession(false);
     }
+    return null;
   };
 
   const logout = async () => {
@@ -168,33 +170,40 @@ export default function App() {
   };
 
   const updateLocation = async () => {
-    if (!profile) return;
+    if (!profile) return null;
     setIsCheckingLoc(true);
     setErrorMsg(null);
     try {
+      const activeProfile = await getProfile(siteUrl) || profile;
+
       let currentLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
       setLocation(currentLocation);
 
-      if (profile.branch_lat && profile.branch_lng) {
-        const dist = getDistance(
+      let calcDist = null;
+      if (activeProfile.branch_lat && activeProfile.branch_lng) {
+        calcDist = getDistance(
           { latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude },
-          { latitude: profile.branch_lat, longitude: profile.branch_lng }
+          { latitude: activeProfile.branch_lat, longitude: activeProfile.branch_lng }
         );
-        setDistance(dist);
+        setDistance(calcDist);
       } else {
         setDistance(null);
       }
+      return { activeProfile, calcDist, currentLocation };
     } catch (e) {
       setErrorMsg('No se pudo obtener la ubicación actual.');
+      return null;
     } finally {
       setIsCheckingLoc(false);
     }
   };
 
   const handleCheckInOut = async (actionType: 'IN' | 'OUT') => {
-    await updateLocation();
+    const locData = await updateLocation();
+    if (!locData) return;
+    const { activeProfile, calcDist, currentLocation } = locData;
 
     // Obtener ID único del dispositivo móvil simulando la "MAC"
     let deviceId = 'unknown';
@@ -206,11 +215,11 @@ export default function App() {
         }
     } catch(e) {}
 
-    if (profile.branch_lat && profile.branch_lng) {
-        if (distance === null) return;
-        const allowed_dist = profile.max_distance ?? 20;
-        if (distance > allowed_dist) {
-            Alert.alert('Fuera de rango', `Estás a ${distance} metros. Necesitas estar a menos de ${allowed_dist}m de tu sucursal.`);
+    if (activeProfile.branch_lat && activeProfile.branch_lng) {
+        if (calcDist === null) return;
+        const allowed_dist = activeProfile.max_distance ?? 20;
+        if (calcDist > allowed_dist) {
+            Alert.alert('Fuera de rango', `Estás a ${calcDist} metros. Necesitas estar a menos de ${allowed_dist}m de tu sucursal.`);
             return;
         }
     } else {
@@ -227,8 +236,8 @@ export default function App() {
             },
             body: JSON.stringify({ 
                 log_type: actionType,
-                latitude: location?.coords.latitude,
-                longitude: location?.coords.longitude,
+                latitude: currentLocation?.coords.latitude,
+                longitude: currentLocation?.coords.longitude,
                 device_id: deviceId
             }),
             credentials: 'include'
@@ -237,7 +246,7 @@ export default function App() {
         
         if (res.ok && data.message) {
             Alert.alert('¡Éxito!', `Marcación de ${actionType === 'IN' ? 'Entrada' : 'Salida'} registrada correctamente.`);
-            setProfile({ ...profile, last_log_type: actionType });
+            setProfile({ ...activeProfile, last_log_type: actionType });
         } else {
             let errorDetalle = data.exc_type || 'Error al guardar la marcación';
             if (data._server_messages) {
