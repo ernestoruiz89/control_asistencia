@@ -407,6 +407,36 @@ function showCreateShiftDialog() {
 }
 
 function showAssignShiftDialog() {
+    if (!weeklyData || weeklyData.length === 0) {
+        // No employees — prompt to create one first
+        const d = new frappe.ui.Dialog({
+            title: __('Asignar Turno'),
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    options: `
+                        <div style="text-align: center; padding: 20px 10px;">
+                            <i class="fa fa-users" style="font-size: 48px; color: #d5d8dc; margin-bottom: 15px;"></i>
+                            <p style="font-size: 14px; color: #7f8c8d; margin-bottom: 20px;">
+                                ${__('No hay empleados registrados en el sistema. Crea uno primero para poder asignarle turnos.')}
+                            </p>
+                            <button class="btn btn-primary" id="btn-create-employee-from-assign">
+                                <i class="fa fa-plus"></i> ${__('Crear Empleado')}
+                            </button>
+                        </div>
+                    `,
+                },
+            ],
+        });
+        d.show();
+        d.$wrapper.find('.modal-footer').hide();
+        d.$wrapper.find('#btn-create-employee-from-assign').on('click', () => {
+            d.hide();
+            showAddEmployeeDialog();
+        });
+        return;
+    }
+
     frappe.call({
         method: `${API}.get_shift_types`,
         callback: ({ message: shifts }) => {
