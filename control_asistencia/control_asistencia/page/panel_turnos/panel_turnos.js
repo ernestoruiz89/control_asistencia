@@ -251,26 +251,26 @@ function loadData() {
         },
         callback: ({ message }) => {
             weeklyData = message || [];
-            updateBranchFilter(weeklyData);
+            updateBranchFilter();
             applyFilterAndRender();
         },
         error: () => frappe.msgprint(__('Error al cargar los datos del panel.')),
     });
 }
 
-function updateBranchFilter(data) {
+function updateBranchFilter() {
     const branchSelect = document.getElementById('branch-filter');
     if (!branchSelect) return;
-    const prevVal = branchSelect.value;
-    const branches = new Set();
-    data.forEach(emp => { if (emp.branch) branches.add(emp.branch); });
 
-    let html = '<option value="">Todas las sucursales</option>';
-    Array.from(branches).sort().forEach(b => {
-        html += `<option value="${b}">${b}</option>`;
+    frappe.db.get_list('Branch', { fields: ['name'], order_by: 'name asc', limit: 500 }).then(branches => {
+        const prevVal = branchSelect.value;
+        let html = `<option value="">${__('Todas las sucursales')}</option>`;
+        branches.forEach(b => {
+            html += `<option value="${b.name}">${b.name}</option>`;
+        });
+        branchSelect.innerHTML = html;
+        branchSelect.value = prevVal || '';
     });
-    branchSelect.innerHTML = html;
-    branchSelect.value = prevVal || '';
 }
 
 let shiftTimeouts = [];
