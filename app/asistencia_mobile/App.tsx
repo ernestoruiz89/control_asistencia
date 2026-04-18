@@ -180,20 +180,24 @@ export default function App() {
     try {
       const activeProfile = await getProfile(siteUrl) || profile;
 
-      let currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setLocation(currentLocation);
-
+      let currentLocation = null;
       let calcDist = null;
-      if (activeProfile.branch_lat && activeProfile.branch_lng) {
-        calcDist = getDistance(
-          { latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude },
-          { latitude: activeProfile.branch_lat, longitude: activeProfile.branch_lng }
-        );
-        setDistance(calcDist);
-      } else {
-        setDistance(null);
+
+      if (activeProfile.require_geolocation) {
+        currentLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        setLocation(currentLocation);
+
+        if (activeProfile.branch_lat && activeProfile.branch_lng) {
+          calcDist = getDistance(
+            { latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude },
+            { latitude: activeProfile.branch_lat, longitude: activeProfile.branch_lng }
+          );
+          setDistance(calcDist);
+        } else {
+          setDistance(null);
+        }
       }
       return { activeProfile, calcDist, currentLocation };
     } catch (e) {
@@ -219,15 +223,17 @@ export default function App() {
         }
     } catch(e) {}
 
-    if (activeProfile.branch_lat && activeProfile.branch_lng) {
-        if (calcDist === null) return;
-        const allowed_dist = activeProfile.max_distance ?? 20;
-        if (calcDist > allowed_dist) {
-            Alert.alert('Fuera de rango', `Estás a ${calcDist} metros. Necesitas estar a menos de ${allowed_dist}m de tu sucursal.`);
-            return;
+    if (activeProfile.require_geolocation) {
+        if (activeProfile.branch_lat && activeProfile.branch_lng) {
+            if (calcDist === null) return;
+            const allowed_dist = activeProfile.max_distance ?? 20;
+            if (calcDist > allowed_dist) {
+                Alert.alert('Fuera de rango', `Estás a ${calcDist} metros. Necesitas estar a menos de ${allowed_dist}m de tu sucursal.`);
+                return;
+            }
+        } else {
+            Alert.alert('Advertencia', 'Tu sucursal no tiene coordenadas GPS configuradas. La marcación procederá sin validación de geocerca.');
         }
-    } else {
-        Alert.alert('Advertencia', 'Tu sucursal no tiene coordenadas GPS configuradas. La marcación procederá sin validación de geocerca.');
     }
 
     try {
@@ -358,7 +364,7 @@ export default function App() {
 
   // --------- RENDER PRINCIPAL ---------
   const allowed_dist = profile.max_distance ?? 20;
-  const canAction = !profile.branch_lat || (distance !== null && distance <= allowed_dist);
+  const canAction = !profile.require_geolocation || !profile.branch_lat || (distance !== null && distance <= allowed_dist);
   const status = profile.last_log_type === 'IN' ? 'checked-in' : 'checked-out';
 
   return (
@@ -393,33 +399,37 @@ export default function App() {
             </Text>
           </View>
           
-          <View style={styles.divider} />
+          {profile.require_geolocation && (
+            <>
+              <View style={styles.divider} />
 
-          {errorMsg ? (
-             <Text style={styles.errorText}>{errorMsg}</Text>
-          ) : !profile.branch_lat ? (
-             <Text style={styles.infoText}>Esta sucursal no tiene validación GPS activa.</Text>
-          ) : isCheckingLoc ? (
-            <ActivityIndicator size="small" color="#6366f1" style={{ marginVertical: 10 }} />
-          ) : distance !== null ? (
-            <View style={styles.distanceContainer}>
-              <Text style={styles.distanceLabel}>Distancia actual a la sucursal:</Text>
-              <Text style={[styles.distanceValue, !canAction && styles.textRed]}>
-                {distance} metros
-              </Text>
-              {!canAction && (
-                <Text style={styles.warningText}>
-                  Debes acercarte a {allowed_dist}m para registrarte.
-                </Text>
+              {errorMsg ? (
+                 <Text style={styles.errorText}>{errorMsg}</Text>
+              ) : !profile.branch_lat ? (
+                 <Text style={styles.infoText}>Esta sucursal no tiene validación GPS activa.</Text>
+              ) : isCheckingLoc ? (
+                <ActivityIndicator size="small" color="#6366f1" style={{ marginVertical: 10 }} />
+              ) : distance !== null ? (
+                <View style={styles.distanceContainer}>
+                  <Text style={styles.distanceLabel}>Distancia actual a la sucursal:</Text>
+                  <Text style={[styles.distanceValue, !canAction && styles.textRed]}>
+                    {distance} metros
+                  </Text>
+                  {!canAction && (
+                    <Text style={styles.warningText}>
+                      Debes acercarte a {allowed_dist}m para registrarte.
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <Text style={styles.infoText}>Obteniendo ubicación...</Text>
               )}
-            </View>
-          ) : (
-            <Text style={styles.infoText}>Obteniendo ubicación...</Text>
-          )}
 
-          <TouchableOpacity style={styles.refreshButton} onPress={updateLocation}>
-            <Text style={styles.refreshButtonText}>Actualizar Ubicación</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={styles.refreshButton} onPress={updateLocation}>
+                <Text style={styles.refreshButtonText}>Actualizar Ubicación</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </Animated.View>
 
         {/* ACCIONES */}

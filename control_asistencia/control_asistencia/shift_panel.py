@@ -668,12 +668,14 @@ def get_mobile_profile():
             as_dict=True
         ) or {}
         
-    # Get Settings max_distance
-    max_distance_meters = frappe.db.get_single_value("Ajustes de Control Asistencia", "max_distance_meters")
+    # Get Settings max_distance and geolocation toggle
+    settings = frappe.get_doc("Ajustes de Control Asistencia")
     try:
-        max_distance_meters = float(max_distance_meters) if max_distance_meters is not None else 20
+        max_distance_meters = float(settings.max_distance_meters) if settings.max_distance_meters is not None else 20
     except ValueError:
         max_distance_meters = 20
+        
+    require_geolocation = bool(settings.require_geolocation)
 
     # Get last checkin status to determine if we should show IN or OUT
     last_log_type = frappe.db.get_value(
@@ -690,7 +692,8 @@ def get_mobile_profile():
         "branch_lat": branch_data.get("custom_latitud"),
         "branch_lng": branch_data.get("custom_longitud"),
         "max_distance": max_distance_meters,
-        "last_log_type": last_log_type
+        "last_log_type": last_log_type,
+        "require_geolocation": require_geolocation
     }
 
 @frappe.whitelist()
