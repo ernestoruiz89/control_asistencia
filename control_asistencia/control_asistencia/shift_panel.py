@@ -828,5 +828,6 @@ def sync_attendance_from_checkin(doc, method=None):
 
 def notify_shift_panel_update(doc, method):
     """Publish a realtime event when a related document is modified."""
-    sync_attendance_from_checkin(doc, method)
+    if doc.doctype == "Employee Checkin":
+        sync_attendance_from_checkin(doc, method)
     frappe.publish_realtime("update_shift_panel")
