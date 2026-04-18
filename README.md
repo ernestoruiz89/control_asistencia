@@ -56,6 +56,7 @@ Centro de control visual avanzado para la gestión de horarios y asistencia:
 - **Acciones Rápidas:** Botones para Crear Turnos, Asignar Horarios, dar de alta Nuevos Empleados y editar empleados existentes directamente desde la interfaz.
 - **Filtros Avanzados:** Filtrado por sucursal, estado del empleado y búsqueda por nombre/ID/identificación.
 - **Gestión de Permisos:** Creación y cancelación de Leave Applications (vacaciones/permisos) con asignación automática de Leave Allocation.
+- **Estados Precisos:** La cuadrícula distingue las infracciones indicando si existió Entrada Tardía (E), Salida Temprana (S), o ambas (E y S).
 - **Detalle por Celda:** Click en cualquier celda para ver asignaciones de turno, checkins y permisos del día específico.
 
 ### 🖥️ Página de Asistencia (Desk)
@@ -80,10 +81,10 @@ Aplicación standalone en Python/Tkinter para terminales fijas:
 App nativa para Android e iOS con validación de proximidad:
 
 - **Autenticación por Sesión:** Login contra el endpoint de Frappe con persistencia de cookies.
-- **Geocerca (Geofencing):** Valida la distancia del empleado a las coordenadas GPS de su sucursal antes de permitir la marcación.
-- **Distancia Configurable:** El radio máximo se configura desde `Ajustes de Control Asistencia` en ERPNext.
-- **Seguridad por Device ID:** Vinculación automática del dispositivo (Android ID / iOS Vendor ID) para evitar marcaciones cruzadas.
-- **Interfaz Premium:** Diseño dark-mode con animaciones, indicadores de estado en tiempo real y tarjetas informativas.
+- **Geocerca Opcional:** Valida la distancia exacta del empleado a su sucursal antes de permitir la marcación, o se oculta dinámicamente si el administrador apaga el requerimiento de GPS.
+- **Distancia Configurable:** El radio máximo y la obligatoriedad se configuran desde `Ajustes de Control Asistencia` en ERPNext.
+- **Seguridad por Device ID:** Vinculación automática del serial de hardware del dispositivo para evitar suplantaciones de terminal.
+- **Interfaz Premium:** Diseño elegante e inteligente con toggle para revelar contraseña y animaciones informativas que responden al estado real.
 
 ### ⚙️ Configuración Centralizada
 
