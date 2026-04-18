@@ -354,6 +354,12 @@ def get_weekly_panel_data(start_date, days=7):
 
                     if late_in or early_out:
                         status = "out_of_schedule"
+                        if late_in and early_out:
+                            detail = "Fuera de horario (E y S)"
+                        elif late_in:
+                            detail = "Fuera de horario (E)"
+                        else:
+                            detail = "Fuera de horario (S)"
                     else:
                         status = "on_time"
             else:
