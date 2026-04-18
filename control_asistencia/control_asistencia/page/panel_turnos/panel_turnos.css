@@ -172,7 +172,13 @@
     border-left: 2px solid var(--primary, #2490ef) !important;
     border-right: 2px solid var(--primary, #2490ef) !important;
     background: var(--bg-primary-light, #eef6ff) !important;
-    /* Soft tint for the header */
+    font-weight: 800 !important;
+    color: #1c3d5a !important;
+}
+
+[data-theme="dark"] .shift-grid th.is-today {
+    background: rgba(36, 144, 239, 0.15) !important;
+    color: #e2e8f0 !important;
 }
 
 .shift-grid td.is-today {
