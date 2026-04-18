@@ -12,7 +12,8 @@ import {
   TextInput,
   Alert,
   Platform,
-  Image
+  Image,
+  KeyboardAvoidingView
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as Application from 'expo-application';
@@ -282,7 +283,10 @@ export default function App() {
   // --------- RENDER LOGIN ---------
   if (!sessionActive) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', padding: 30 }]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[styles.container, { justifyContent: 'center', padding: 30 }]}
+      >
         <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
         <Image 
           source={require('./assets/icon.png')} 
@@ -344,7 +348,7 @@ export default function App() {
             <Text style={styles.btnText}>Iniciar Sesión</Text>
           )}
         </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
