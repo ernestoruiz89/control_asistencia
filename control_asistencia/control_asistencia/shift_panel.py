@@ -630,7 +630,8 @@ def create_employee_with_user(
 
         # Now add the role — the Employee link exists so Frappe keeps it
         user_doc = frappe.get_doc("User", email)
-        if not user_doc.has_role(user_role):
+        has_role = any(r.role == user_role for r in user_doc.get("roles", []))
+        if not has_role:
             user_doc.add_roles(user_role)
         frappe.db.commit()
 
