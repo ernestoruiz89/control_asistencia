@@ -6,12 +6,12 @@
 const API = 'control_asistencia.control_asistencia.shift_panel';
 const DAY_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const STATUS_LABELS = {
-    on_time:         'En tiempo',
+    on_time: 'En tiempo',
     out_of_schedule: 'Fuera de horario',
-    absent:          'Ausente',
-    leave:           'Vacaciones / Permiso',
-    not_scheduled:   'No programado',
-    future:          'Día futuro',
+    absent: 'Ausente',
+    leave: 'Vacaciones / Permiso',
+    not_scheduled: 'No programado',
+    future: 'Día futuro',
 };
 
 let currentStartDate = getMonday(new Date());
@@ -128,7 +128,7 @@ function renderLegend() {
     let html = '';
     for (const [key, label] of Object.entries(STATUS_LABELS)) {
         if (key === 'future') continue; // Omitir, se combina con el anterior
-        
+
         let finalLabel = label;
         if (key === 'not_scheduled') {
             finalLabel = 'No programado / Día futuro';
@@ -148,7 +148,7 @@ function bindEvents() {
     document.getElementById('branch-filter').addEventListener('change', () => applyFilterAndRender());
     document.getElementById('status-filter').addEventListener('change', () => applyFilterAndRender());
     document.getElementById('employee-filter').addEventListener('input', () => applyFilterAndRender());
-    
+
     document.getElementById('view-type').addEventListener('change', (e) => {
         currentViewType = e.target.value;
         if (currentViewType === 'month') {
@@ -176,7 +176,7 @@ function bindEvents() {
         }
         loadData();
     });
-    
+
     document.getElementById('btn-create-shift').addEventListener('click', showCreateShiftDialog);
     document.getElementById('btn-assign-shift').addEventListener('click', showAssignShiftDialog);
     document.getElementById('btn-add-employee').addEventListener('click', () => {
@@ -245,7 +245,7 @@ function loadData() {
 
     frappe.call({
         method: `${API}.get_weekly_panel_data`,
-        args: { 
+        args: {
             start_date: ws,
             days: numDays
         },
@@ -264,7 +264,7 @@ function updateBranchFilter(data) {
     const prevVal = branchSelect.value;
     const branches = new Set();
     data.forEach(emp => { if (emp.branch) branches.add(emp.branch); });
-    
+
     let html = '<option value="">Todas las sucursales</option>';
     Array.from(branches).sort().forEach(b => {
         html += `<option value="${b}">${b}</option>`;
@@ -309,14 +309,14 @@ function applyFilterAndRender() {
     if (branchVal) {
         data = data.filter(emp => emp.branch === branchVal);
     }
-    
+
     if (statusVal && statusVal !== 'All') {
         data = data.filter(emp => emp.status === statusVal);
     }
 
     if (filterText) {
-        data = data.filter(emp => 
-            emp.employee_name.toLowerCase().includes(filterText) || 
+        data = data.filter(emp =>
+            emp.employee_name.toLowerCase().includes(filterText) ||
             emp.employee.toLowerCase().includes(filterText) ||
             (emp.custom_identificacion && emp.custom_identificacion.toLowerCase().includes(filterText))
         );
@@ -328,19 +328,19 @@ function applyFilterAndRender() {
 function renderGrid(data) {
     const ws = new Date(currentStartDate);
     const numDays = data.length > 0 ? data[0].days.length : (currentViewType === 'week' ? 7 : 31);
-    
+
     let headerCols = '<th class="col-employee" style="min-width: 250px;">Empleado</th>';
     for (let i = 0; i < numDays; i++) {
         const d = new Date(ws);
         d.setDate(d.getDate() + i);
-        
+
         let displayDay;
         if (currentViewType === 'week') {
             displayDay = DAY_NAMES[d.getDay() === 0 ? 6 : d.getDay() - 1];
         } else {
             displayDay = d.getDate();
         }
-        
+
         headerCols += `<th style="min-width: 100px;">${displayDay}<br><small>${fmtShort(d)}</small></th>`;
     }
 
@@ -389,7 +389,7 @@ function showCreateShiftDialog() {
         title: __('Crear Nuevo Turno'),
         fields: [
             { fieldname: 'start_time', label: __('Hora de Inicio'), fieldtype: 'Time', reqd: 1 },
-            { fieldname: 'end_time',   label: __('Hora de Fin'),    fieldtype: 'Time', reqd: 1 },
+            { fieldname: 'end_time', label: __('Hora de Fin'), fieldtype: 'Time', reqd: 1 },
         ],
         primary_action_label: __('Crear'),
         primary_action: (values) => {
@@ -426,7 +426,7 @@ function showAssignShiftDialog() {
                     { fieldname: 'shift_type', label: __('Turno'), fieldtype: 'Select', options: options, reqd: 1 },
                     { fieldtype: 'Section Break' },
                     { fieldname: 'start_date', label: __('Fecha Inicio'), fieldtype: 'Date', reqd: 1, default: fmtDate(currentStartDate) },
-                    { fieldname: 'end_date',   label: __('Fecha Fin'),    fieldtype: 'Date', reqd: 1, default: fmtDate(defaultEndDate) },
+                    { fieldname: 'end_date', label: __('Fecha Fin'), fieldtype: 'Date', reqd: 1, default: fmtDate(defaultEndDate) },
                     { fieldtype: 'Section Break', label: __('Días Programables') },
                     { fieldtype: 'HTML', fieldname: 'quick_actions' },
                     { fieldtype: 'Section Break' },
@@ -475,14 +475,14 @@ function showAssignShiftDialog() {
                 </div>
             `);
             d.fields_dict.quick_actions.$wrapper.find('#sel-all').on('click', () => {
-                ['mon','tue','wed','thu','fri','sat','sun'].forEach(f => d.set_value(f, 1));
+                ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].forEach(f => d.set_value(f, 1));
             });
             d.fields_dict.quick_actions.$wrapper.find('#sel-week').on('click', () => {
-                ['mon','tue','wed','thu','fri'].forEach(f => d.set_value(f, 1));
-                ['sat','sun'].forEach(f => d.set_value(f, 0));
+                ['mon', 'tue', 'wed', 'thu', 'fri'].forEach(f => d.set_value(f, 1));
+                ['sat', 'sun'].forEach(f => d.set_value(f, 0));
             });
             d.fields_dict.quick_actions.$wrapper.find('#sel-none').on('click', () => {
-                ['mon','tue','wed','thu','fri','sat','sun'].forEach(f => d.set_value(f, 0));
+                ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].forEach(f => d.set_value(f, 0));
             });
 
             d.show();
@@ -542,10 +542,10 @@ function _buildDayDialog(employee, employeeName, date, details) {
             return '';
         };
         const typeLabel = (action) => {
-            if (action === 'clock-in')     return '🟢 Entrada';
-            if (action === 'clock-out')    return '🔴 Salida';
-            if (action === 'break start')  return '🟡 Inicio Break';
-            if (action === 'break end')    return '🔵 Fin Break';
+            if (action === 'clock-in') return '🟢 Entrada';
+            if (action === 'clock-out') return '🔴 Salida';
+            if (action === 'break start') return '🟡 Inicio Break';
+            if (action === 'break end') return '🔵 Fin Break';
             return action || '—';
         };
 
@@ -594,12 +594,12 @@ function _buildDayDialog(employee, employeeName, date, details) {
         </div>
         <div class="text-muted" style="font-size: 13px;">${__('Ya existe un permiso asignado en esta fecha. Si deseas programar unas nuevas vacaciones, primero deberás cancelar este permiso.')}</div>`;
         rightHtml += '</div>';
-        
+
         dialogFields.push({ fieldname: 'right_html', fieldtype: 'HTML', options: rightHtml });
     } else {
         rightHtml += `<div class="text-muted" style="margin-bottom:20px;font-size:13px;">${__('Sin historial de permisos programados para este día. Puedes generar uno usando el formato de abajo:')}</div>`;
         rightHtml += '</div>';
-        
+
         dialogFields.push(
             { fieldname: 'right_html', fieldtype: 'HTML', options: rightHtml },
             { fieldname: 'leave_type', label: __('Aplicar Nuevo Permiso'), fieldtype: 'Link', options: 'Leave Type' },
@@ -734,18 +734,18 @@ function showAddEmployeeDialog() {
     // Fetch designations and departments first, then build the dialog
     Promise.all([
         frappe.db.get_list('Designation', { fields: ['name'], limit: 200, order_by: 'name asc' }),
-        frappe.db.get_list('Department',  { fields: ['name'], limit: 200, order_by: 'name asc' }),
+        frappe.db.get_list('Department', { fields: ['name'], limit: 200, order_by: 'name asc' }),
     ]).then(([designations, departments]) => {
         const desigOptions = [{ label: __('— Seleccionar —'), value: '' }]
             .concat(designations.map(d => ({ label: d.name, value: d.name })));
-        const deptOptions  = [{ label: __('— Seleccionar —'), value: '' }]
+        const deptOptions = [{ label: __('— Seleccionar —'), value: '' }]
             .concat(departments.map(d => ({ label: d.name, value: d.name })));
 
         const roleOptions = [
-            { label: __('Personal (Solo consulta)'), value: 'Employee'    },
-            { label: __('Supervisor'),                value: 'HR User'    },
-            { label: __('Administrador RRHH'),        value: 'HR Manager' },
-            { label: __('Administrador Sistema'),     value: 'System Manager' },
+            { label: __('Personal (Solo consulta)'), value: 'Employee' },
+            { label: __('Supervisor'), value: 'HR User' },
+            { label: __('Administrador RRHH'), value: 'HR Manager' },
+            { label: __('Administrador Sistema'), value: 'System Manager' },
         ];
 
         // Compute default joining date = Jan 1 of current year
@@ -805,9 +805,9 @@ function showAddEmployeeDialog() {
                     reqd: 1,
                     options: [
                         { label: __('— Seleccionar —'), value: '' },
-                        { label: __('Masculino'),        value: 'Male'   },
-                        { label: __('Femenino'),         value: 'Female' },
-                        { label: __('Otro'),             value: 'Other'  },
+                        { label: __('Masculino'), value: 'Male' },
+                        { label: __('Femenino'), value: 'Female' },
+                        { label: __('Otro'), value: 'Other' },
                     ],
                 },
 
@@ -826,12 +826,6 @@ function showAddEmployeeDialog() {
                     default: defaultJoining,
                     description: __('Por defecto: 1 de enero del presente año.'),
                 },
-                {
-                    fieldname: 'branch',
-                    fieldtype: 'Link',
-                    label: __('Sucursal (Branch)'),
-                    options: 'Branch',
-                },
                 { fieldtype: 'Column Break' },
                 {
                     fieldname: 'department',
@@ -839,7 +833,12 @@ function showAddEmployeeDialog() {
                     label: __('Departamento'),
                     options: deptOptions,
                 },
-
+                {
+                    fieldname: 'branch',
+                    fieldtype: 'Link',
+                    label: __('Sucursal (Branch)'),
+                    options: 'Branch',
+                },
                 // ── Configuración de Acceso ──
                 { fieldtype: 'Section Break', label: __('CONFIGURACIÓN DE ACCESO'), collapsible: 0 },
                 {
@@ -868,17 +867,17 @@ function showAddEmployeeDialog() {
                 frappe.call({
                     method: `${API}.create_employee_with_user`,
                     args: {
-                        first_name:      values.first_name || '',
-                        last_name:       values.last_name  || '',
-                        email:           values.email      || '',
-                        gender:          values.gender     || '',
-                        date_of_birth:   values.date_of_birth   || '',
+                        first_name: values.first_name || '',
+                        last_name: values.last_name || '',
+                        email: values.email || '',
+                        gender: values.gender || '',
+                        date_of_birth: values.date_of_birth || '',
                         date_of_joining: values.date_of_joining || defaultJoining,
-                        designation:     values.designation || '',
-                        department:      values.department  || '',
-                        branch:          values.branch      || '',
-                        user_role:       values.user_role   || 'Employee',
-                        password:        values.password    || '',
+                        designation: values.designation || '',
+                        department: values.department || '',
+                        branch: values.branch || '',
+                        user_role: values.user_role || 'Employee',
+                        password: values.password || '',
                     },
                     freeze: true,
                     freeze_message: __('Creando empleado...'),
@@ -904,15 +903,15 @@ function showAddEmployeeDialog() {
 
 function showEditEmployeeDialog(employeeName) {
     if (!employeeName) return;
-    
+
     frappe.call({
         method: 'frappe.client.get',
         args: { doctype: 'Employee', name: employeeName },
         freeze: true,
-        callback: function(r) {
+        callback: function (r) {
             if (!r.message) return;
             const emp = r.message;
-            
+
             const dialog = new frappe.ui.Dialog({
                 title: __('Editar Empleado: ') + emp.employee_name,
                 fields: [
@@ -954,7 +953,7 @@ function showEditEmployeeDialog(employeeName) {
                     },
                 ],
                 primary_action_label: __('Guardar Cambios'),
-                primary_action: function(values) {
+                primary_action: function (values) {
                     if (values.status === 'Left' && !values.relieving_date) {
                         frappe.msgprint(__('La <b>Fecha de Salida</b> es requerida cuando el estado es "Left".'));
                         return;
@@ -973,7 +972,7 @@ function showEditEmployeeDialog(employeeName) {
                         method: 'frappe.client.set_value',
                         args: { doctype: 'Employee', name: employeeName, fieldname: db_values },
                         freeze: true,
-                        callback: function() {
+                        callback: function () {
                             if (!emp.user_id) {
                                 frappe.show_alert({ message: __('Datos actualizados.'), indicator: 'green' });
                                 dialog.hide();
@@ -993,7 +992,7 @@ function showEditEmployeeDialog(employeeName) {
                                     fieldname: userFields,
                                 },
                                 freeze: true,
-                                callback: function() {
+                                callback: function () {
                                     const msg = new_password
                                         ? __('Datos, contraseña y acceso actualizados.')
                                         : __('Datos y acceso al sistema actualizados.');
@@ -1015,14 +1014,14 @@ function showEditEmployeeDialog(employeeName) {
                         </button>
                     </div>
                 `);
-                
+
                 dialog.fields_dict.btn_unlink.$wrapper.find('#btn-desvincular-mac').on('click', () => {
                     frappe.confirm('Al desvincular el equipo, la aplicación de escritorio creará automáticamente una vinculación como si fuera la primera vez durante la próxima marcación del empleado.<br><br>¿Seguro de desvincular la MAC?', () => {
                         frappe.call({
                             method: 'frappe.client.set_value',
                             args: { doctype: 'Employee', name: employeeName, fieldname: 'attendance_device_id', value: '' },
                             freeze: true,
-                            callback: function() {
+                            callback: function () {
                                 frappe.msgprint({ title: 'Computadora Desvinculada', message: 'El dispositivo ha quedado desvinculado con éxito. Se registrará la nueva MAC automáticamente cuando el empleado registre asistencia.', indicator: 'orange' });
                                 dialog.hide();
                             }
@@ -1040,7 +1039,7 @@ function showEditEmployeeDialog(employeeName) {
                 frappe.set_route('Form', 'Employee', employeeName);
                 dialog.hide();
             });
-            
+
             dialog.show();
         }
     });
