@@ -283,72 +283,74 @@ export default function App() {
   // --------- RENDER LOGIN ---------
   if (!sessionActive) {
     return (
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.container, { justifyContent: 'center', padding: 30 }]}
-      >
+      <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
-        <Image 
-          source={require('./assets/icon.png')} 
-          style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 40, resizeMode: 'contain' }} 
-        />
-        
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Servidor ERPNext (Ej. https://mi-erp.com)</Text>
-          <TextInput 
-            style={styles.input} 
-            value={siteUrl} 
-            onChangeText={setSiteUrl}
-            placeholder="URL del sistema"
-            placeholderTextColor="#475569"
-            autoCapitalize="none"
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, justifyContent: 'center', padding: 30 }}
+        >
+          <Image 
+            source={require('./assets/icon.png')} 
+            style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 40, resizeMode: 'contain' }} 
           />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Usuario o Correo</Text>
-          <TextInput 
-            style={styles.input} 
-            value={email} 
-            onChangeText={setEmail}
-            placeholder="nombre de usuario o correo"
-            placeholderTextColor="#475569"
-            autoCapitalize="none"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Contraseña</Text>
-          <View style={{ position: 'relative', justifyContent: 'center' }}>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Servidor ERPNext (Ej. https://mi-erp.com)</Text>
             <TextInput 
               style={styles.input} 
-              value={password} 
-              onChangeText={setPassword}
-              placeholder="********"
+              value={siteUrl} 
+              onChangeText={setSiteUrl}
+              placeholder="URL del sistema"
               placeholderTextColor="#475569"
-              secureTextEntry={!showPassword}
+              autoCapitalize="none"
             />
-            <TouchableOpacity 
-              style={{ position: 'absolute', right: 15, padding: 5 }}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Text style={{ color: '#6366f1', fontWeight: 'bold' }}>{showPassword ? 'Ocultar' : 'Ver'}</Text>
-            </TouchableOpacity>
           </View>
-        </View>
 
-        <TouchableOpacity 
-          style={styles.btnLogin} 
-          onPress={login}
-          disabled={isLoggingIn}
-        >
-          {isLoggingIn ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.btnText}>Iniciar Sesión</Text>
-          )}
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Usuario o Correo</Text>
+            <TextInput 
+              style={styles.input} 
+              value={email} 
+              onChangeText={setEmail}
+              placeholder="nombre de usuario o correo"
+              placeholderTextColor="#475569"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Contraseña</Text>
+            <View style={{ position: 'relative', justifyContent: 'center' }}>
+              <TextInput 
+                style={styles.input} 
+                value={password} 
+                onChangeText={setPassword}
+                placeholder="********"
+                placeholderTextColor="#475569"
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity 
+                style={{ position: 'absolute', right: 15, padding: 5 }}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={{ color: '#6366f1', fontWeight: 'bold' }}>{showPassword ? 'Ocultar' : 'Ver'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.btnLogin} 
+            onPress={login}
+            disabled={isLoggingIn}
+          >
+            {isLoggingIn ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.btnText}>Iniciar Sesión</Text>
+            )}
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </View>
     );
   }
 
