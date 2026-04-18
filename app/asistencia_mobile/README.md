@@ -5,9 +5,10 @@ App nativa (Android / iOS) estructurada en [React Native](https://reactnative.de
 ## Características Principales
 
 1. **Gestión de Sesión Constante**: Se almacena la última URL del servidor conectada utilizando AsyncStorage y cookies del lado del servidor nativo.
-2. **Geolocalización In-App**: Rastrea la latitud y longitud antes de procesar cualquier entrada para verificar que se encuentre dentro del radio de metros configurados en el ERP.
+2. **Geolocalización In-App y Condicional**: Rastrea la latitud y longitud antes de procesar entradas para validar la estancia en la sucursal asignada. Esta validación es inteligente y se desactiva dinámicamente si el administrador central apaga esta regla, ahorrando batería al usuario y agilizando su marcado.
 3. **Restricción de Dispositivo Multicuenta**: Valida internamente el `device_id` simulando la MAC con el serial propio del dispositivo para bloquear marcaciones compartidas.
-4. **Diseño Premium Interactivo**: Construcción visual amigable con *Dark Mode* predeterminado, indicadores vivos (pulse animations) y respuestas inmediatas en la cuadrícula del ERP.
+4. **Respuesta Táctil Avanzada**: Maneja una estructura fluida (`KeyboardAvoidingView`) para evitar sobrelapamientos de teclado e incluye un revelador de contraseñas por seguridad.
+5. **Diseño Premium**: Construcción visual amigable con *Dark Mode* predeterminado, indicadores vivos (pulse animations) y alertas tempranas si se está fuera de cobertura.
 
 ---
 
