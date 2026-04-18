@@ -23,7 +23,7 @@ const { width } = Dimensions.get('window');
 
 export default function App() {
   // --------- ESTADOS DE AUTENTICACION Y PERFIL ---------
-  const [siteUrl, setSiteUrl] = useState('https://dr.bizontec.com');
+  const [siteUrl, setSiteUrl] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(true);
