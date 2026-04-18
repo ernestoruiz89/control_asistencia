@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"header1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Control de Asistencia</span>\",\"col\":12}},{\"id\":\"card1\",\"type\":\"card\",\"data\":{\"card_name\":\"Enlaces\",\"col\":4}}]",
+ "content": "[{\"id\":\"header1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Control de Asistencia</span>\",\"col\":12}},{\"id\":\"card_pages\",\"type\":\"card\",\"data\":{\"card_name\":\"Páginas\",\"col\":4}},{\"id\":\"card_attendance\",\"type\":\"card\",\"data\":{\"card_name\":\"Asistencia\",\"col\":4}},{\"id\":\"card_hr\",\"type\":\"card\",\"data\":{\"card_name\":\"Recursos Humanos\",\"col\":4}},{\"id\":\"card_shifts\",\"type\":\"card\",\"data\":{\"card_name\":\"Turnos\",\"col\":4}},{\"id\":\"card_leaves\",\"type\":\"card\",\"data\":{\"card_name\":\"Permisos y Vacaciones\",\"col\":4}},{\"id\":\"card_config\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuración\",\"col\":4}}]",
  "creation": "2026-04-10 08:30:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,7 +16,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Enlaces",
+   "label": "Páginas",
    "link_count": 0,
    "link_type": "DocType",
    "onboard": 0,
@@ -29,13 +29,120 @@
    "link_count": 0,
    "link_to": "panel-turnos",
    "link_type": "Page",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Control de Asistencia",
+   "link_count": 0,
+   "link_to": "asistencia",
+   "link_type": "Page",
    "onboard": 0,
    "type": "Link"
   },
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Asignaci\u00f3n de Turnos",
+   "label": "Asistencia",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Registros de Asistencia",
+   "link_count": 0,
+   "link_to": "Employee Checkin",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asistencia",
+   "link_count": 0,
+   "link_to": "Attendance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Recursos Humanos",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Empleados",
+   "link_count": 0,
+   "link_to": "Employee",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Departamento",
+   "link_count": 0,
+   "link_to": "Department",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Puesto / Cargo",
+   "link_count": 0,
+   "link_to": "Designation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sucursal",
+   "link_count": 0,
+   "link_to": "Branch",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Turnos",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tipos de Turno",
+   "link_count": 0,
+   "link_to": "Shift Type",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asignación de Turnos",
    "link_count": 0,
    "link_to": "Shift Assignment",
    "link_type": "DocType",
@@ -45,9 +152,18 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Registros de Asistencia",
+   "label": "Permisos y Vacaciones",
    "link_count": 0,
-   "link_to": "Employee Checkin",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Solicitud de Permiso",
+   "link_count": 0,
+   "link_to": "Leave Application",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -55,17 +171,56 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Empleados",
+   "label": "Tipo de Permiso",
    "link_count": 0,
-   "link_to": "Employee",
+   "link_to": "Leave Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asignación de Permisos",
+   "link_count": 0,
+   "link_to": "Leave Allocation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configuración",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Ajustes de Control Asistencia",
+   "link_count": 0,
+   "link_to": "Ajustes de Control Asistencia",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Días Festivos",
+   "link_count": 0,
+   "link_to": "Holiday List",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
   }
  ],
 
- "modified": "2026-04-10 08:45:39.518708",
- "modified_by": "eruiz@findenicaragua.com",
+ "modified": "2026-04-18 14:45:00.000000",
+ "modified_by": "Administrator",
  "module": "Control Asistencia",
  "name": "Control de Asistencia",
  "number_cards": [],
@@ -76,6 +231,9 @@
  "roles": [
   {
    "role": "HR Manager"
+  },
+  {
+   "role": "HR User"
   },
   {
    "role": "System Manager"
