@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # 🕐 Control Asistencia
 
@@ -243,4 +243,3 @@ Herramientas configuradas:
 Este proyecto está licenciado bajo la **[MIT License](license.txt)**.
 
 Desarrollado por **Ernesto Ruiz Escorcia** · [eruiz@wbapps.com](mailto:eruiz@wbapps.com)
-]]>
