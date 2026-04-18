@@ -519,6 +519,32 @@ def cancel_leave(leave_name):
     return {"name": doc.name}
 
 
+def _split_first_name(raw_name):
+    """Split a compound first-name into (first_name, middle_name).
+
+    Handles Spanish connectors so that, for example:
+    - "Juan Alonso"        → ("Juan", "Alonso")
+    - "Ana de los Angeles" → ("Ana", "de los Angeles")
+    - "María"              → ("María", "")
+
+    Connectors (de, del, de la, de los, de las, el, la, los, las)
+    are kept together with the word that follows them.
+    """
+    CONNECTORS = {"de", "del", "la", "las", "los", "el"}
+    parts = (raw_name or "").strip().split()
+    if len(parts) <= 1:
+        return (raw_name or "").strip(), ""
+
+    first = parts[0]
+    rest = parts[1:]
+
+    # If the remaining text starts with a connector, keep it all as middle
+    if rest[0].lower() in CONNECTORS:
+        return first, " ".join(rest)
+
+    return first, " ".join(rest)
+
+
 @frappe.whitelist()
 def create_employee_with_user(
     first_name,
@@ -539,14 +565,30 @@ def create_employee_with_user(
     matching User account exists (creates one if it doesn't).  The User is
     linked to the employee via the ``user_id`` field.
 
+    The incoming *first_name* is parsed to extract
+    ``first_name`` / ``middle_name`` (e.g. "Ana de los Angeles" →
+    first="Ana", middle="de los Angeles").
+
     Returns ``{"employee": name, "user": email_or_None, "user_created": bool}``.
     """
+    # ── 0. Parse composite first name ───────────────────────────────────────
+    actual_first, actual_middle = _split_first_name(first_name)
+
+    # Build full employee_name
+    name_parts = [actual_first]
+    if actual_middle:
+        name_parts.append(actual_middle)
+    if last_name:
+        name_parts.append(last_name)
+    employee_name = " ".join(name_parts)
+
     # ── 1. Create the Employee ──────────────────────────────────────────────
     emp_doc = frappe.get_doc({
         "doctype": "Employee",
-        "first_name": first_name,
+        "first_name": actual_first,
+        "middle_name": actual_middle,
         "last_name": last_name or "",
-        "employee_name": (first_name + (" " + last_name if last_name else "")).strip(),
+        "employee_name": employee_name,
         "date_of_birth": date_of_birth or None,
         "date_of_joining": date_of_joining or frappe.utils.today(),
         "designation": designation or None,
@@ -567,22 +609,29 @@ def create_employee_with_user(
     if email:
         email = email.strip().lower()
         if not frappe.db.exists("User", email):
+            # Create the User WITHOUT the target role first to avoid
+            # Frappe stripping it (it validates Employee ↔ User link).
             user_doc = frappe.get_doc({
                 "doctype": "User",
                 "email": email,
-                "first_name": first_name,
+                "first_name": actual_first,
                 "last_name": last_name or "",
                 "send_welcome_email": 0,
                 "user_type": "System User",
-                "roles": [{"role": user_role}],
             })
             if password:
                 user_doc.new_password = password
             user_doc.insert(ignore_permissions=True)
             user_created = True
 
-        # Link employee → user
+        # Link employee → user (must happen BEFORE adding the role)
         frappe.db.set_value("Employee", emp_doc.name, "user_id", email)
+        frappe.db.commit()
+
+        # Now add the role — the Employee link exists so Frappe keeps it
+        user_doc = frappe.get_doc("User", email)
+        if not user_doc.has_role(user_role):
+            user_doc.add_roles(user_role)
         frappe.db.commit()
 
     return {
