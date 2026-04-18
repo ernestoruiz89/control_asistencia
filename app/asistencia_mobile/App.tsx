@@ -11,7 +11,8 @@ import {
   StatusBar,
   TextInput,
   Alert,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as Application from 'expo-application';
@@ -273,7 +274,10 @@ export default function App() {
     return (
       <View style={[styles.container, { justifyContent: 'center', padding: 30 }]}>
         <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
-        <Text style={[styles.title, { textAlign: 'center', marginBottom: 40 }]}>Asistencia ERP</Text>
+        <Image 
+          source={require('./assets/icon.png')} 
+          style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 40, resizeMode: 'contain' }} 
+        />
         
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Servidor ERPNext (Ej. https://mi-erp.com)</Text>
