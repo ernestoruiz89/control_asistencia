@@ -250,58 +250,58 @@ frappe.pages['asistencia'].on_page_load = async function (wrapper) {
         let locHtml = '';
         if (profile.require_geolocation) {
             if (locErrorMsg) {
-                locHtml = \`<p class="am-error-text">\${locErrorMsg}</p>\`;
+                locHtml = `<p class="am-error-text">${locErrorMsg}</p>`;
             } else if (!profile.branch_lat) {
-                locHtml = \`<p class="am-info-text">Esta sucursal no tiene validación GPS activa.</p>\`;
+                locHtml = `<p class="am-info-text">Esta sucursal no tiene validación GPS activa.</p>`;
             } else if (isCheckingLoc) {
-                locHtml = \`<p class="am-info-text">Obteniendo ubicación actual...</p>\`;
+                locHtml = `<p class="am-info-text">Obteniendo ubicación actual...</p>`;
             } else if (locationDist !== null) {
-                locHtml = \`
+                locHtml = `
                     <div class="am-distance-container">
                         <p class="am-distance-label">Distancia actual a la sucursal:</p>
-                        <p class="am-distance-value \${!canAction ? 'am-text-red' : ''}">\${locationDist} metros</p>
-                        \${!canAction ? \`<p class="am-warning-text">Debes acercarte a menos de \${allowed_dist}m para registrarte.</p>\` : ''}
+                        <p class="am-distance-value ${!canAction ? 'am-text-red' : ''}">${locationDist} metros</p>
+                        ${!canAction ? `<p class="am-warning-text">Debes acercarte a menos de ${allowed_dist}m para registrarte.</p>` : ''}
                     </div>
-                \`;
+                `;
             } else {
-                locHtml = \`<p class="am-info-text">Esperando ubicación...</p>\`;
+                locHtml = `<p class="am-info-text">Esperando ubicación...</p>`;
             }
-            locHtml += \`<button class="am-refresh-btn" id="am-btn-refresh">Actualizar Ubicación</button>\`;
+            locHtml += `<button class="am-refresh-btn" id="am-btn-refresh">Actualizar Ubicación</button>`;
         }
 
         const inDisabled = !canAction || status === 'checked-in' || savingLog || isCheckingLoc;
         const outDisabled = !canAction || status === 'checked-out' || savingLog || isCheckingLoc;
 
-        const html = \`
+        const html = `
             <div class="am-header">
                 <div class="am-title-row">
                     <h1 class="am-title">Marcar Asistencia</h1>
                     <span class="am-logout" onclick="window.location.href='/app'">Salir</span>
                 </div>
-                <p class="am-greeting">Hola, \${profile.employee_name}</p>
+                <p class="am-greeting">Hola, ${profile.employee_name}</p>
                 <div class="am-branch-container">
                     <p class="am-branch-label">Sucursal Asignada</p>
-                    <p class="am-branch-text">\${profile.branch || 'Sin sucursal'}</p>
+                    <p class="am-branch-text">${profile.branch || 'Sin sucursal'}</p>
                 </div>
             </div>
             <div class="am-content">
                 <div class="am-status-card am-pulse">
                     <div class="am-indicator-container">
-                        <div class="am-dot \${status === 'checked-in' ? 'am-dot-green' : 'am-dot-gray'}"></div>
-                        <h2 class="am-status-text">\${status === 'checked-in' ? 'Turno Activo (Check-IN)' : 'Sin turno activo'}</h2>
+                        <div class="am-dot ${status === 'checked-in' ? 'am-dot-green' : 'am-dot-gray'}"></div>
+                        <h2 class="am-status-text">${status === 'checked-in' ? 'Turno Activo (Check-IN)' : 'Sin turno activo'}</h2>
                     </div>
-                    \${profile.require_geolocation ? \`<div class="am-divider"></div>\${locHtml}\` : ''}
+                    ${profile.require_geolocation ? `<div class="am-divider"></div>${locHtml}` : ''}
                 </div>
                 <div class="am-actions">
-                    <button class="am-btn-action am-btn-in \${inDisabled ? 'am-btn-disabled' : ''}" id="am-btn-in" \${inDisabled ? 'disabled' : ''}>
-                        \${savingLog && profile._attemptAction === 'IN' ? 'Guardando...' : 'Check IN'}
+                    <button class="am-btn-action am-btn-in ${inDisabled ? 'am-btn-disabled' : ''}" id="am-btn-in" ${inDisabled ? 'disabled' : ''}>
+                        ${savingLog && profile._attemptAction === 'IN' ? 'Guardando...' : 'Check IN'}
                     </button>
-                    <button class="am-btn-action am-btn-out \${outDisabled ? 'am-btn-disabled' : ''}" id="am-btn-out" \${outDisabled ? 'disabled' : ''}>
-                        \${savingLog && profile._attemptAction === 'OUT' ? 'Guardando...' : 'Check OUT'}
+                    <button class="am-btn-action am-btn-out ${outDisabled ? 'am-btn-disabled' : ''}" id="am-btn-out" ${outDisabled ? 'disabled' : ''}>
+                        ${savingLog && profile._attemptAction === 'OUT' ? 'Guardando...' : 'Check OUT'}
                     </button>
                 </div>
             </div>
-        \`;
+        `;
 
         app.html(html);
 
@@ -384,7 +384,7 @@ frappe.pages['asistencia'].on_page_load = async function (wrapper) {
                 savingLog = false;
                 if (!r.exc && r.message) {
                     frappe.show_alert({
-                        message: \`Marcación de \${actionType === 'IN' ? 'Entrada' : 'Salida'} exitosa\`, 
+                        message: `Marcación de ${actionType === 'IN' ? 'Entrada' : 'Salida'} exitosa`, 
                         indicator: 'green'
                     });
                     profile.last_log_type = actionType;
@@ -421,11 +421,11 @@ frappe.pages['asistencia'].on_page_load = async function (wrapper) {
                     checkLocation();
                 }
             } else {
-                $('#am-app').html(\`
+                $('#am-app').html(`
                     <div style="flex:1; display:flex; justify-content:center; alignItems:center; padding:40px;">
                         <span class="am-error-text">No se pudo cargar el perfil del empleado o su sesión ha expirado.</span>
                     </div>
-                \`);
+                `);
             }
         }
     });
