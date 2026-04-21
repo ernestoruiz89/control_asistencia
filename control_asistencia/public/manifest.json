@@ -1,0 +1,16 @@
+{
+  "name": "Control de Asistencia",
+  "short_name": "Asistencia",
+  "description": "Marcación de asistencia con geolocalización",
+  "start_url": "/asistencia",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "icons": [
+    {
+      "src": "/assets/control_asistencia/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
