@@ -12,4 +12,4 @@ control_asistencia.patches.add_control_de_asistencia_workspace_v5
 
 
 
-
+control_asistencia.patches.remove_asistencia_page
