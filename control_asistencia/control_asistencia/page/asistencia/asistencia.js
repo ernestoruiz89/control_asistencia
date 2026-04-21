@@ -44,12 +44,6 @@ frappe.pages['asistencia'].on_page_load = async function (wrapper) {
         "    margin-bottom: 5px;" +
         "    margin-top: 0;" +
         "}" +
-        ".am-logout {" +
-        "    color: #f43f5e;" +
-        "    font-weight: bold;" +
-        "    text-decoration: none !important;" +
-        "    cursor: pointer;" +
-        "}" +
         ".am-greeting {" +
         "    color: #94a3b8;" +
         "    font-size: 16px;" +
@@ -284,7 +278,6 @@ frappe.pages['asistencia'].on_page_load = async function (wrapper) {
             '<div class="am-header">' +
             '    <div class="am-title-row">' +
             '        <h1 class="am-title">Marcar Asistencia</h1>' +
-            '        <span class="am-logout" onclick="window.location.href=\'/app\'">Salir</span>' +
             '    </div>' +
             '    <p class="am-greeting">Hola, ' + employeeName + '</p>' +
             '    <div class="am-branch-container">' +
