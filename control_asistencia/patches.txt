@@ -8,8 +8,4 @@ control_asistencia.patches.migrate_tipo_registro_to_english
 control_asistencia.patches.rename_shift_types
 control_asistencia.patches.add_control_de_asistencia_workspace_v4
 control_asistencia.patches.add_control_de_asistencia_workspace_v5
-
-
-
-
-control_asistencia.patches.remove_asistencia_page
+control_asistencia.patches.remove_asistencia_page
