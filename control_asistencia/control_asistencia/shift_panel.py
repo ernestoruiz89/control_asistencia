@@ -75,6 +75,12 @@ def _get_leave_approver(employee):
     frappe.throw(_("No hay aprobador de vacaciones configurado para este empleado."))
 
 
+def _is_privileged_approver():
+    """Return True if the current user is a System Manager or HR Manager."""
+    roles = frappe.get_roles(frappe.session.user)
+    return "System Manager" in roles or "HR Manager" in roles
+
+
 @frappe.whitelist()
 def get_shift_types():
     """Return all Shift Type records with a UI-friendly label."""
@@ -667,13 +673,16 @@ def get_pending_leave_approvals():
     if frappe.session.user == "Guest":
         frappe.throw(_("Not logged in"), frappe.AuthenticationError)
 
+    filters = {
+        "status": "Open",
+        "docstatus": 0,
+    }
+    if not _is_privileged_approver():
+        filters["leave_approver"] = frappe.session.user
+
     rows = frappe.get_all(
         "Leave Application",
-        filters={
-            "leave_approver": frappe.session.user,
-            "status": "Open",
-            "docstatus": 0,
-        },
+        filters=filters,
         fields=[
             "name",
             "employee",
@@ -684,6 +693,7 @@ def get_pending_leave_approvals():
             "half_day",
             "half_day_date",
             "description",
+            "leave_approver",
             "creation",
         ],
         order_by="creation asc",
@@ -699,8 +709,8 @@ def decide_leave_application(leave_name, action):
         frappe.throw(_("Not logged in"), frappe.AuthenticationError)
 
     doc = frappe.get_doc("Leave Application", leave_name)
-    if doc.leave_approver != frappe.session.user:
-        frappe.throw(_("No eres el aprobador asignado para esta solicitud."))
+    if doc.leave_approver != frappe.session.user and not _is_privileged_approver():
+        frappe.throw(_("No eres el aprobador asignado para esta solicitud y no tienes permisos de administrador."))
     if doc.status != "Open" or doc.docstatus != 0:
         frappe.throw(_("Esta solicitud ya fue procesada."))
 

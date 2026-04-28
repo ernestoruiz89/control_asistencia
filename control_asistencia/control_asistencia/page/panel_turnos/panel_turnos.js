@@ -437,7 +437,7 @@ function showLeaveApprovalsDialog() {
                 <td>${escapeHtml(lv.leave_type)}</td>
                 <td>${escapeHtml(lv.from_date)}<br><span class="text-muted">${__('a')} ${escapeHtml(lv.to_date)}</span></td>
                 <td>${lv.half_day ? __('Medio dia') : __('Dia completo')}</td>
-                <td>${escapeHtml(lv.description || '')}</td>
+                <td><span class="text-muted" style="font-size:12px;">${escapeHtml(lv.leave_approver)}</span></td>
                 <td style="white-space:nowrap;">
                     <button class="btn btn-success btn-xs btn-approve-leave" data-name="${escapeHtml(lv.name)}">
                         <i class="fa fa-check"></i> ${__('Aprobar')}
@@ -458,7 +458,7 @@ function showLeaveApprovalsDialog() {
                             <th>${__('Tipo')}</th>
                             <th>${__('Fechas')}</th>
                             <th>${__('Jornada')}</th>
-                            <th>${__('Comentario')}</th>
+                            <th>${__('Aprobador')}</th>
                             <th>${__('Accion')}</th>
                         </tr>
                     </thead>
