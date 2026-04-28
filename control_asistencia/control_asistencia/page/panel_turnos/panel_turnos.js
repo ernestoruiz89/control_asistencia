@@ -17,6 +17,7 @@ const STATUS_LABELS = {
 let currentStartDate = getMonday(new Date());
 let currentViewType = 'week';
 let weeklyData = [];
+let pendingLeaveApprovals = [];
 
 frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({
@@ -67,6 +68,9 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                     <button class="btn btn-success btn-sm" id="btn-assign-shift">
                         <i class="fa fa-calendar-check-o"></i> ${__('Asignar Turno')}
                     </button>
+                    <button class="btn btn-warning btn-sm" id="btn-leave-approvals" style="display:none;">
+                        <i class="fa fa-inbox"></i> ${__('Solicitudes')} <span id="leave-approval-count" class="badge" style="background:#fff;color:#8a5a00;margin-left:4px;">0</span>
+                    </button>
                     <button class="btn btn-secondary btn-sm" id="btn-add-employee">
                         <i class="fa fa-user-plus"></i> ${__('Nuevo Empleado')}
                     </button>
@@ -82,10 +86,12 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
     renderLegend();
     bindEvents();
     loadData();
+    loadPendingLeaveApprovals();
 
     // Escuchar eventos en tiempo real (WebSockets) desde el backend
     frappe.realtime.on('update_shift_panel', () => {
         loadData();
+        loadPendingLeaveApprovals();
     });
 };
 
@@ -117,6 +123,10 @@ function fmtDate(d) {
 
 function fmtShort(d) {
     return d.getDate() + '/' + (d.getMonth() + 1);
+}
+
+function escapeHtml(value) {
+    return $('<div>').text(value == null ? '' : String(value)).html();
 }
 
 function renderLegend() {
@@ -179,6 +189,7 @@ function bindEvents() {
 
     document.getElementById('btn-create-shift').addEventListener('click', showCreateShiftDialog);
     document.getElementById('btn-assign-shift').addEventListener('click', showAssignShiftDialog);
+    document.getElementById('btn-leave-approvals').addEventListener('click', showLeaveApprovalsDialog);
     document.getElementById('btn-add-employee').addEventListener('click', () => {
         showAddEmployeeDialog();
     });
@@ -255,6 +266,25 @@ function loadData() {
             applyFilterAndRender();
         },
         error: () => frappe.msgprint(__('Error al cargar los datos del panel.')),
+    });
+}
+
+function loadPendingLeaveApprovals() {
+    frappe.call({
+        method: `${API}.get_pending_leave_approvals`,
+        callback: ({ message }) => {
+            pendingLeaveApprovals = message || [];
+            const btn = document.getElementById('btn-leave-approvals');
+            const badge = document.getElementById('leave-approval-count');
+            if (!btn || !badge) return;
+            badge.textContent = pendingLeaveApprovals.length;
+            btn.style.display = pendingLeaveApprovals.length ? '' : 'none';
+        },
+        error: () => {
+            pendingLeaveApprovals = [];
+            const btn = document.getElementById('btn-leave-approvals');
+            if (btn) btn.style.display = 'none';
+        },
     });
 }
 
@@ -391,6 +421,92 @@ function renderGrid(data) {
 }
 
 // ── Dialogs ─────────────────────────────────────────────────────────────────
+
+function showLeaveApprovalsDialog() {
+    const renderRows = () => {
+        if (!pendingLeaveApprovals.length) {
+            return `<div class="text-muted" style="padding:16px;">${__('No hay solicitudes pendientes para aprobar.')}</div>`;
+        }
+
+        const rows = pendingLeaveApprovals.map(lv => `
+            <tr>
+                <td>
+                    <div style="font-weight:600;">${escapeHtml(lv.employee_name || lv.employee)}</div>
+                    <div class="text-muted" style="font-size:12px;">${escapeHtml(lv.employee)}</div>
+                </td>
+                <td>${escapeHtml(lv.leave_type)}</td>
+                <td>${escapeHtml(lv.from_date)}<br><span class="text-muted">${__('a')} ${escapeHtml(lv.to_date)}</span></td>
+                <td>${lv.half_day ? __('Medio dia') : __('Dia completo')}</td>
+                <td>${escapeHtml(lv.description || '')}</td>
+                <td style="white-space:nowrap;">
+                    <button class="btn btn-success btn-xs btn-approve-leave" data-name="${escapeHtml(lv.name)}">
+                        <i class="fa fa-check"></i> ${__('Aprobar')}
+                    </button>
+                    <button class="btn btn-danger btn-xs btn-reject-leave" data-name="${escapeHtml(lv.name)}" style="margin-left:6px;">
+                        <i class="fa fa-times"></i> ${__('Rechazar')}
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        return `
+            <div style="max-height:60vh;overflow:auto;">
+                <table class="table table-bordered table-hover" style="margin:0;">
+                    <thead>
+                        <tr>
+                            <th>${__('Empleado')}</th>
+                            <th>${__('Tipo')}</th>
+                            <th>${__('Fechas')}</th>
+                            <th>${__('Jornada')}</th>
+                            <th>${__('Comentario')}</th>
+                            <th>${__('Accion')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    };
+
+    const d = new frappe.ui.Dialog({
+        title: __('Solicitudes de vacaciones pendientes'),
+        size: 'extra-large',
+        fields: [
+            { fieldtype: 'HTML', fieldname: 'requests_html', options: renderRows() },
+        ],
+        primary_action_label: __('Cerrar'),
+        primary_action: () => d.hide(),
+    });
+
+    const process = (leaveName, action) => {
+        const label = action === 'approve' ? __('aprobar') : __('rechazar');
+        frappe.confirm(__('Deseas {0} esta solicitud?', [label]), () => {
+            frappe.call({
+                method: `${API}.decide_leave_application`,
+                args: { leave_name: leaveName, action },
+                freeze: true,
+                freeze_message: __('Procesando...'),
+                callback: () => {
+                    frappe.show_alert({
+                        message: action === 'approve' ? __('Solicitud aprobada.') : __('Solicitud rechazada.'),
+                        indicator: action === 'approve' ? 'green' : 'red',
+                    });
+                    d.hide();
+                    loadPendingLeaveApprovals();
+                    loadData();
+                },
+            });
+        });
+    };
+
+    d.show();
+    d.$wrapper.on('click', '.btn-approve-leave', function () {
+        process($(this).data('name'), 'approve');
+    });
+    d.$wrapper.on('click', '.btn-reject-leave', function () {
+        process($(this).data('name'), 'reject');
+    });
+}
 
 function showCreateShiftDialog() {
     const d = new frappe.ui.Dialog({

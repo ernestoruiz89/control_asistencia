@@ -77,6 +77,28 @@
         font-weight: 700;
         margin: 0;
     }
+    .am-tabs {
+        display: flex;
+        gap: 8px;
+        padding: 16px 25px 0 25px;
+        background-color: #0f172a;
+    }
+    .am-tab {
+        flex: 1;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(30, 41, 59, 0.9);
+        color: #cbd5e1;
+        border-radius: 12px;
+        padding: 11px 8px;
+        font-size: 14px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+    .am-tab-active {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #1e293b;
+    }
     .am-content {
         flex: 1;
         padding: 25px;
@@ -214,6 +236,123 @@
         opacity: 0.7;
         box-shadow: none;
     }
+    .am-leave-content {
+        justify-content: flex-start;
+        gap: 16px;
+        overflow-y: auto;
+    }
+    .am-form-card,
+    .am-list-card {
+        background: #ffffff;
+        color: #334155;
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 12px 20px rgba(15, 23, 42, 0.18);
+    }
+    .am-card-title {
+        font-size: 17px;
+        font-weight: 800;
+        margin: 0 0 14px 0;
+        color: #1e293b;
+    }
+    .am-field {
+        margin-bottom: 12px;
+    }
+    .am-field label {
+        display: block;
+        font-size: 12px;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+    .am-field input,
+    .am-field select,
+    .am-field textarea {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 11px 12px;
+        font-size: 15px;
+        color: #1e293b;
+        background: #ffffff;
+        box-sizing: border-box;
+    }
+    .am-field textarea {
+        min-height: 72px;
+        resize: vertical;
+    }
+    .am-check-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #334155;
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+    .am-check-row input {
+        width: 18px;
+        height: 18px;
+    }
+    .am-submit-btn {
+        width: 100%;
+        min-height: 48px;
+        border: none;
+        border-radius: 14px;
+        background: #2563eb;
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+    .am-leave-row {
+        border-top: 1px solid #e2e8f0;
+        padding: 12px 0;
+    }
+    .am-leave-row:first-child {
+        border-top: none;
+        padding-top: 0;
+    }
+    .am-leave-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    .am-leave-type {
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0 0 4px 0;
+    }
+    .am-leave-dates {
+        color: #64748b;
+        font-size: 13px;
+        margin: 0;
+    }
+    .am-status-pill {
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 11px;
+        font-weight: 800;
+        white-space: nowrap;
+        background: #e2e8f0;
+        color: #334155;
+    }
+    .am-status-open { background: #fef3c7; color: #92400e; }
+    .am-status-approved { background: #dcfce7; color: #166534; }
+    .am-status-rejected { background: #fee2e2; color: #991b1b; }
+    .am-cancel-btn {
+        margin-top: 9px;
+        border: 1px solid #fecaca;
+        border-radius: 10px;
+        background: #fff1f2;
+        color: #be123c;
+        padding: 8px 10px;
+        font-weight: 800;
+        font-size: 12px;
+        cursor: pointer;
+    }
     .am-loading {
         display: flex;
         justify-content: center;
@@ -244,6 +383,31 @@ frappe.ready(function() {
     let isCheckingLoc = false;
     let locErrorMsg = null;
     let savingLog = false;
+    let activeTab = 'attendance';
+    let leaveTypes = [];
+    let leaveApplications = [];
+    let savingLeave = false;
+    let cancellingLeave = null;
+
+    function esc(value) {
+        return $('<div>').text(value == null ? '' : String(value)).html();
+    }
+
+    function leaveStatusLabel(status) {
+        const labels = {
+            Open: 'Pendiente',
+            Approved: 'Aprobada',
+            Rejected: 'Rechazada',
+            Cancelled: 'Cancelada'
+        };
+        return labels[status] || status || '';
+    }
+
+    function todayLocalISO() {
+        const d = new Date();
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().slice(0, 10);
+    }
 
     function render() {
         if (!profile) return;
@@ -280,8 +444,8 @@ frappe.ready(function() {
         const inDisabled = !canAction || status === 'checked-in' || savingLog || isCheckingLoc;
         const outDisabled = !canAction || status === 'checked-out' || savingLog || isCheckingLoc;
 
-        const employeeName = profile.employee_name || 'Empleado';
-        const branchName = profile.branch || 'Sin sucursal';
+        const employeeName = esc(profile.employee_name || 'Empleado');
+        const branchName = esc(profile.branch || 'Sin sucursal');
         const statusDot = status === 'checked-in' ? 'am-dot-green' : 'am-dot-gray';
         const statusLabel = status === 'checked-in' ? 'Turno Activo (Check-IN)' : 'Sin turno activo';
         const inStr = (savingLog && profile._attemptAction === 'IN') ? 'Guardando...' : 'Check IN';
@@ -298,30 +462,94 @@ frappe.ready(function() {
             '        <p class="am-branch-text">' + branchName + '</p>' +
             '    </div>' +
             '</div>' +
-            '<div class="am-content">' +
-            '    <div class="am-status-card am-pulse">' +
-            '        <div class="am-indicator-container">' +
-            '            <div class="am-dot ' + statusDot + '"></div>' +
-            '            <h2 class="am-status-text">' + statusLabel + '</h2>' +
-            '        </div>';
-        
-        if (profile.require_geolocation) {
-            html += '<div class="am-divider"></div>' + locHtml;
-        }
-
-        html +=
-            '    </div>' +
-            '    <div class="am-actions">' +
-            '        <button class="am-btn-action am-btn-in ' + (inDisabled ? 'am-btn-disabled' : '') + '" id="am-btn-in" ' + (inDisabled ? 'disabled' : '') + '>' + inStr + '</button>' +
-            '        <button class="am-btn-action am-btn-out ' + (outDisabled ? 'am-btn-disabled' : '') + '" id="am-btn-out" ' + (outDisabled ? 'disabled' : '') + '>' + outStr + '</button>' +
-            '    </div>' +
+            '<div class="am-tabs">' +
+            '    <button class="am-tab ' + (activeTab === 'attendance' ? 'am-tab-active' : '') + '" id="am-tab-attendance">Asistencia</button>' +
+            '    <button class="am-tab ' + (activeTab === 'leave' ? 'am-tab-active' : '') + '" id="am-tab-leave">Solicitudes</button>' +
             '</div>';
+
+        if (activeTab === 'attendance') {
+            html +=
+                '<div class="am-content">' +
+                '    <div class="am-status-card am-pulse">' +
+                '        <div class="am-indicator-container">' +
+                '            <div class="am-dot ' + statusDot + '"></div>' +
+                '            <h2 class="am-status-text">' + statusLabel + '</h2>' +
+                '        </div>';
+        
+            if (profile.require_geolocation) {
+                html += '<div class="am-divider"></div>' + locHtml;
+            }
+
+            html +=
+                '    </div>' +
+                '    <div class="am-actions">' +
+                '        <button class="am-btn-action am-btn-in ' + (inDisabled ? 'am-btn-disabled' : '') + '" id="am-btn-in" ' + (inDisabled ? 'disabled' : '') + '>' + inStr + '</button>' +
+                '        <button class="am-btn-action am-btn-out ' + (outDisabled ? 'am-btn-disabled' : '') + '" id="am-btn-out" ' + (outDisabled ? 'disabled' : '') + '>' + outStr + '</button>' +
+                '    </div>' +
+                '</div>';
+        } else {
+            const leaveOptions = leaveTypes.map(function(t) {
+                return '<option value="' + esc(t.name) + '">' + esc(t.name) + '</option>';
+            }).join('');
+            let rows = '';
+            if (!leaveApplications.length) {
+                rows = '<p class="am-info-text">No tienes solicitudes registradas.</p>';
+            } else {
+                rows = leaveApplications.map(function(lv) {
+                    const statusClass = 'am-status-' + String(lv.status || '').toLowerCase();
+                    let cancelBtn = '';
+                    if (lv.can_cancel) {
+                        const cancelText = cancellingLeave === lv.name ? 'Cancelando...' : 'Cancelar solicitud';
+                        cancelBtn = '<button class="am-cancel-btn" data-leave-name="' + esc(lv.name) + '" ' + (cancellingLeave ? 'disabled' : '') + '>' + cancelText + '</button>';
+                    }
+                    return '<div class="am-leave-row">' +
+                        '<div class="am-leave-head">' +
+                        '<div>' +
+                        '<p class="am-leave-type">' + esc(lv.leave_type) + '</p>' +
+                        '<p class="am-leave-dates">' + esc(lv.from_date) + ' a ' + esc(lv.to_date) + (lv.half_day ? ' - medio dia' : '') + '</p>' +
+                        '</div>' +
+                        '<span class="am-status-pill ' + statusClass + '">' + esc(leaveStatusLabel(lv.status)) + '</span>' +
+                        '</div>' +
+                        (lv.description ? '<p class="am-info-text" style="margin-top:8px;">' + esc(lv.description) + '</p>' : '') +
+                        cancelBtn +
+                        '</div>';
+                }).join('');
+            }
+
+            html +=
+                '<div class="am-content am-leave-content">' +
+                '    <div class="am-form-card">' +
+                '        <h2 class="am-card-title">Solicitar vacaciones</h2>' +
+                '        <div class="am-field"><label>Tipo</label><select id="am-leave-type">' + leaveOptions + '</select></div>' +
+                '        <div class="am-field"><label>Desde</label><input type="date" id="am-from-date"></div>' +
+                '        <div class="am-field"><label>Hasta</label><input type="date" id="am-to-date"></div>' +
+                '        <label class="am-check-row"><input type="checkbox" id="am-half-day"> Medio dia</label>' +
+                '        <div class="am-field"><label>Comentario</label><textarea id="am-description" placeholder="Opcional"></textarea></div>' +
+                '        <button class="am-submit-btn ' + (savingLeave ? 'am-btn-disabled' : '') + '" id="am-submit-leave" ' + (savingLeave ? 'disabled' : '') + '>' + (savingLeave ? 'Enviando...' : 'Enviar solicitud') + '</button>' +
+                '    </div>' +
+                '    <div class="am-list-card">' +
+                '        <h2 class="am-card-title">Mis solicitudes</h2>' +
+                         rows +
+                '    </div>' +
+                '</div>';
+        }
 
         app.html(html);
 
+        $('#am-tab-attendance').on('click', function() { activeTab = 'attendance'; render(); });
+        $('#am-tab-leave').on('click', function() { activeTab = 'leave'; render(); loadLeaveData(); });
         $('#am-btn-refresh').on('click', checkLocation);
         $('#am-btn-in').on('click', function() { handleLog('IN'); });
         $('#am-btn-out').on('click', function() { handleLog('OUT'); });
+        $('#am-submit-leave').on('click', submitLeaveRequest);
+        $('.am-cancel-btn').on('click', function() {
+            cancelLeaveRequest($(this).data('leave-name'));
+        });
+        if (activeTab === 'leave') {
+            const today = todayLocalISO();
+            $('#am-from-date').val(today);
+            $('#am-to-date').val(today);
+        }
     }
 
     function getDistance(lat1, lon1, lat2, lon2) {
@@ -423,12 +651,97 @@ frappe.ready(function() {
         });
     }
 
+    function loadLeaveData() {
+        frappe.call({
+            method: 'control_asistencia.control_asistencia.shift_panel.get_leave_type_options',
+            callback: function(r) {
+                leaveTypes = r.message || [];
+                frappe.call({
+                    method: 'control_asistencia.control_asistencia.shift_panel.get_my_leave_applications',
+                    callback: function(res) {
+                        leaveApplications = res.message || [];
+                        if (activeTab === 'leave') render();
+                    }
+                });
+            }
+        });
+    }
+
+    function submitLeaveRequest() {
+        if (savingLeave) return;
+
+        const leaveType = $('#am-leave-type').val();
+        const fromDate = $('#am-from-date').val();
+        const toDate = $('#am-to-date').val();
+        const halfDay = $('#am-half-day').is(':checked') ? 1 : 0;
+        const description = $('#am-description').val() || '';
+
+        if (!leaveType || !fromDate || !toDate) {
+            frappe.msgprint({ title: 'Datos incompletos', message: 'Selecciona tipo, fecha inicial y fecha final.', indicator: 'orange' });
+            return;
+        }
+
+        savingLeave = true;
+        render();
+
+        frappe.call({
+            method: 'control_asistencia.control_asistencia.shift_panel.request_mobile_leave',
+            args: {
+                leave_type: leaveType,
+                from_date: fromDate,
+                to_date: toDate,
+                half_day: halfDay,
+                half_day_date: halfDay ? fromDate : null,
+                description: description
+            },
+            callback: function(r) {
+                savingLeave = false;
+                if (!r.exc && r.message) {
+                    frappe.show_alert({ message: 'Solicitud enviada para aprobacion.', indicator: 'green' });
+                    loadLeaveData();
+                } else {
+                    render();
+                }
+            },
+            error: function() {
+                savingLeave = false;
+                render();
+            }
+        });
+    }
+
+    function cancelLeaveRequest(leaveName) {
+        if (!leaveName || cancellingLeave) return;
+        frappe.confirm('Cancelar esta solicitud pendiente?', function() {
+            cancellingLeave = leaveName;
+            render();
+            frappe.call({
+                method: 'control_asistencia.control_asistencia.shift_panel.cancel_mobile_leave',
+                args: { leave_name: leaveName },
+                callback: function(r) {
+                    cancellingLeave = null;
+                    if (!r.exc) {
+                        frappe.show_alert({ message: 'Solicitud cancelada.', indicator: 'red' });
+                        loadLeaveData();
+                    } else {
+                        render();
+                    }
+                },
+                error: function() {
+                    cancellingLeave = null;
+                    render();
+                }
+            });
+        });
+    }
+
     frappe.call({
         method: 'control_asistencia.control_asistencia.shift_panel.get_mobile_profile',
         callback: function(r) {
             if (r.message) {
                 profile = r.message;
                 render();
+                loadLeaveData();
                 if (profile.require_geolocation) {
                     checkLocation();
                 }

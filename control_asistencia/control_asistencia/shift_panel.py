@@ -43,6 +43,38 @@ def _fmt_hour_12(t):
     return f"{display_h}:{m:02d}{suffix}"
 
 
+def _get_session_employee():
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user_id": frappe.session.user},
+        ["name", "employee_name", "leave_approver"],
+        as_dict=True,
+    )
+    if not employee:
+        frappe.throw(_("No hay ningun Empleado vinculado a tu cuenta de usuario."))
+    return employee
+
+
+def _get_leave_approver(employee):
+    approver = frappe.db.get_value("Employee", employee, "leave_approver")
+    if approver:
+        return approver
+
+    user = frappe.db.get_value(
+        "Has Role",
+        {"role": "HR Manager", "parenttype": "User"},
+        "parent",
+        order_by="creation asc",
+    )
+    if user:
+        return user
+
+    frappe.throw(_("No hay aprobador de vacaciones configurado para este empleado."))
+
+
 @frappe.whitelist()
 def get_shift_types():
     """Return all Shift Type records with a UI-friendly label."""
@@ -523,6 +555,171 @@ def cancel_leave(leave_name):
     doc.cancel()
     frappe.db.commit()
     return {"name": doc.name}
+
+
+@frappe.whitelist()
+def get_leave_type_options():
+    """Return leave types available for employee self-service."""
+    return frappe.get_all(
+        "Leave Type",
+        fields=["name"],
+        order_by="name asc",
+        limit=200,
+    )
+
+
+@frappe.whitelist()
+def get_my_leave_applications(limit=20):
+    """Return the current employee's recent leave applications."""
+    employee = _get_session_employee()
+    rows = frappe.get_all(
+        "Leave Application",
+        filters={"employee": employee.name, "docstatus": ["<", 2]},
+        fields=[
+            "name",
+            "leave_type",
+            "from_date",
+            "to_date",
+            "half_day",
+            "half_day_date",
+            "status",
+            "description",
+            "leave_approver",
+            "creation",
+        ],
+        order_by="creation desc",
+        limit=int(limit or 20),
+    )
+    for row in rows:
+        row["can_cancel"] = row.status == "Open"
+    return rows
+
+
+@frappe.whitelist()
+def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_date=None, description=None):
+    """Create a draft Leave Application for approval from the attendance page."""
+    employee = _get_session_employee()
+
+    from frappe.utils import getdate
+
+    start = getdate(from_date)
+    end = getdate(to_date)
+    if end < start:
+        frappe.throw(_("La fecha final no puede ser menor que la fecha inicial."))
+
+    half_day = int(half_day or 0)
+    if half_day and not half_day_date:
+        half_day_date = from_date
+
+    overlapping = frappe.get_all(
+        "Leave Application",
+        filters={
+            "employee": employee.name,
+            "from_date": ["<=", str(end)],
+            "to_date": [">=", str(start)],
+            "status": ["in", ["Open", "Approved"]],
+            "docstatus": ["<", 2],
+        },
+        fields=["name", "status"],
+        limit=1,
+    )
+    if overlapping:
+        frappe.throw(_("Ya existe una solicitud de vacaciones en ese rango."))
+
+    doc = frappe.get_doc({
+        "doctype": "Leave Application",
+        "employee": employee.name,
+        "leave_type": leave_type,
+        "from_date": start,
+        "to_date": end,
+        "half_day": half_day,
+        "half_day_date": half_day_date if half_day else None,
+        "description": description or "",
+        "status": "Open",
+        "leave_approver": _get_leave_approver(employee.name),
+    })
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+    notify_shift_panel_update(doc, None)
+    return {"name": doc.name}
+
+
+@frappe.whitelist()
+def cancel_mobile_leave(leave_name):
+    """Allow an employee to cancel their own pending leave request."""
+    employee = _get_session_employee()
+    doc = frappe.get_doc("Leave Application", leave_name)
+    if doc.employee != employee.name:
+        frappe.throw(_("No puedes cancelar una solicitud de otro empleado."))
+    if doc.status != "Open" or doc.docstatus != 0:
+        frappe.throw(_("Solo se pueden cancelar solicitudes sin aprobar o rechazar."))
+
+    doc.status = "Cancelled"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+    notify_shift_panel_update(doc, None)
+    return {"name": doc.name}
+
+
+@frappe.whitelist()
+def get_pending_leave_approvals():
+    """Return pending leave applications assigned to the current leave approver."""
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+    rows = frappe.get_all(
+        "Leave Application",
+        filters={
+            "leave_approver": frappe.session.user,
+            "status": "Open",
+            "docstatus": 0,
+        },
+        fields=[
+            "name",
+            "employee",
+            "employee_name",
+            "leave_type",
+            "from_date",
+            "to_date",
+            "half_day",
+            "half_day_date",
+            "description",
+            "creation",
+        ],
+        order_by="creation asc",
+        limit=200,
+    )
+    return rows
+
+
+@frappe.whitelist()
+def decide_leave_application(leave_name, action):
+    """Approve or reject a pending leave application assigned to this approver."""
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+    doc = frappe.get_doc("Leave Application", leave_name)
+    if doc.leave_approver != frappe.session.user:
+        frappe.throw(_("No eres el aprobador asignado para esta solicitud."))
+    if doc.status != "Open" or doc.docstatus != 0:
+        frappe.throw(_("Esta solicitud ya fue procesada."))
+
+    action = (action or "").lower()
+    if action == "approve":
+        _ensure_leave_allocation(doc.employee, doc.leave_type, doc.from_date, doc.to_date)
+        doc.status = "Approved"
+        doc.leave_approver = frappe.session.user
+        doc.save(ignore_permissions=True)
+        doc.submit()
+    elif action == "reject":
+        doc.status = "Rejected"
+        doc.save(ignore_permissions=True)
+    else:
+        frappe.throw(_("Accion no valida."))
+
+    frappe.db.commit()
+    notify_shift_panel_update(doc, None)
+    return {"name": doc.name, "status": doc.status}
 
 
 def _split_first_name(raw_name):

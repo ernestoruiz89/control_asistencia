@@ -13,6 +13,9 @@
  "page_name": "panel-turnos",
  "roles": [
   {
+   "role": "HR User"
+  },
+  {
    "role": "HR Manager"
   },
   {
