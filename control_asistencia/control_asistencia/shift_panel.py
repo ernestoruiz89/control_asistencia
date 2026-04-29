@@ -863,7 +863,7 @@ def get_mobile_profile():
         
     employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, ["name", "employee_name", "branch"], as_dict=True)
     if not employee:
-        frappe.throw(_("No hay ningún Empleado vinculado a tu cuenta de usuario."))
+        return {"not_employee": True}
         
     # Get Branch details
     branch_data = {}
