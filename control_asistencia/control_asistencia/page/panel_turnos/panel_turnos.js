@@ -1147,27 +1147,98 @@ function showCreateUserForEmployeeDialog(emp, parentDialog) {
                 return;
             }
 
+            const email = (values.email || '').trim().toLowerCase();
+            const userRole = values.user_role || 'Employee';
+            const password = values.password || '';
+
             frappe.call({
-                method: `${API}.create_user_for_employee`,
+                method: 'frappe.client.get_value',
                 args: {
-                    employee: emp.name,
-                    email: values.email || '',
-                    user_role: values.user_role || 'Employee',
-                    password: values.password || '',
+                    doctype: 'Employee',
+                    filters: { user_id: email },
+                    fieldname: 'name',
                 },
                 freeze: true,
                 freeze_message: __('Creando usuario...'),
-                callback({ message: res }) {
-                    if (!res) return;
-                    dialog.hide();
-                    parentDialog.hide();
+                callback({ message: linkedEmployee }) {
+                    const linkedEmployeeName = linkedEmployee && linkedEmployee.name;
+                    if (linkedEmployeeName && linkedEmployeeName !== emp.name) {
+                        frappe.msgprint(__('El usuario <b>{0}</b> ya esta vinculado al empleado <b>{1}</b>.', [email, linkedEmployeeName]));
+                        return;
+                    }
 
-                    const msg = res.user_created
-                        ? __('Usuario del sistema creado y vinculado: <b>{0}</b>', [res.user])
-                        : __('El usuario <b>{0}</b> ya existia y fue vinculado.', [res.user]);
-                    frappe.msgprint({ title: __('Usuario Creado'), message: msg, indicator: 'green' });
-                    loadData();
-                    showEditEmployeeDialog(emp.name);
+                    frappe.call({
+                        method: 'frappe.client.get_value',
+                        args: {
+                            doctype: 'User',
+                            filters: { name: email },
+                            fieldname: 'name',
+                        },
+                        freeze: true,
+                        callback({ message: existingUser }) {
+                            const userExists = !!(existingUser && existingUser.name);
+                            const linkAndConfigureUser = () => {
+                                frappe.call({
+                                    method: 'frappe.client.set_value',
+                                    args: {
+                                        doctype: 'Employee',
+                                        name: emp.name,
+                                        fieldname: {
+                                            user_id: email,
+                                            prefered_email: email,
+                                        },
+                                    },
+                                    freeze: true,
+                                    callback() {
+                                        frappe.call({
+                                            method: `${API}.update_employee_user_access`,
+                                            args: {
+                                                user: email,
+                                                user_role: userRole,
+                                                new_password: password,
+                                                enabled: 1,
+                                            },
+                                            freeze: true,
+                                            callback() {
+                                                dialog.hide();
+                                                parentDialog.hide();
+
+                                                const msg = userExists
+                                                    ? __('El usuario <b>{0}</b> ya existia y fue vinculado.', [email])
+                                                    : __('Usuario del sistema creado y vinculado: <b>{0}</b>', [email]);
+                                                frappe.msgprint({ title: __('Usuario Creado'), message: msg, indicator: 'green' });
+                                                loadData();
+                                                showEditEmployeeDialog(emp.name);
+                                            },
+                                        });
+                                    },
+                                });
+                            };
+
+                            if (userExists) {
+                                linkAndConfigureUser();
+                                return;
+                            }
+
+                            frappe.call({
+                                method: 'frappe.client.insert',
+                                args: {
+                                    doc: {
+                                        doctype: 'User',
+                                        email: email,
+                                        first_name: emp.first_name || emp.employee_name || email,
+                                        last_name: emp.last_name || '',
+                                        send_welcome_email: 0,
+                                        user_type: 'System User',
+                                    },
+                                },
+                                freeze: true,
+                                callback() {
+                                    linkAndConfigureUser();
+                                },
+                            });
+                        },
+                    });
                 },
             });
         },
