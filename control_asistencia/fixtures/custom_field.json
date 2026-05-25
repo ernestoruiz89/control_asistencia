@@ -23,6 +23,18 @@
         "translatable": 0
     },
     {
+        "name": "Employee-no_aplica_turno",
+        "doctype": "Custom Field",
+        "dt": "Employee",
+        "module": "Control Asistencia",
+        "fieldname": "no_aplica_turno",
+        "fieldtype": "Check",
+        "label": "No Aplica Turno",
+        "default": "0",
+        "insert_after": "branch",
+        "translatable": 0
+    },
+    {
         "name": "Branch-custom_latitud",
         "doctype": "Custom Field",
         "dt": "Branch",

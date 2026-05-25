@@ -213,23 +213,31 @@ def get_weekly_panel_data(start_date, days=7):
         order_by="employee_name ASC",
     )
 
+    employee_fields = ["name", "employee_name", "custom_identificacion", "branch", "status"]
+    has_no_aplica_turno = frappe.db.has_column("Employee", "no_aplica_turno")
+    if has_no_aplica_turno:
+        employee_fields.append("no_aplica_turno")
+
     # Also fetch employees with no assignments but who are active
     all_employees = frappe.get_all(
         "Employee",
-        filters={"status": ["in", ["Active", "Inactive", "Suspended", "Left"]]},
-        fields=["name", "employee_name", "custom_identificacion", "branch", "status"],
+        filters={"status": ["in", ["Active", "Suspended", "Left"]]},
+        fields=employee_fields,
         order_by="employee_name ASC",
     )
 
     # Build employee map
     emp_map = {}
     for emp in all_employees:
+        if has_no_aplica_turno and emp.get("no_aplica_turno"):
+            continue
         emp_map[emp.name] = {
             "employee": emp.name,
             "employee_name": emp.employee_name,
             "custom_identificacion": emp.custom_identificacion,
             "branch": emp.branch,
             "status": emp.status,
+            "no_aplica_turno": emp.get("no_aplica_turno") or 0,
             "shifts": {},  # date_str -> shift_type
         }
 
@@ -807,6 +815,7 @@ def create_employee_with_user(
         "designation": designation or None,
         "department": department or None,
         "branch": branch or None,
+        "salary_mode": "Bank",
         "status": "Active",
         "company": frappe.defaults.get_defaults().get("company"),
         "gender": gender or "Male",

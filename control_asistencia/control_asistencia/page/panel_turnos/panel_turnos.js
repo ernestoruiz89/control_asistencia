@@ -51,7 +51,6 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
                     <select id="status-filter" class="form-control input-sm" style="width: 140px;">
                         <option value="All">Filtro: Todos</option>
                         <option value="Active" selected>Solo Activos</option>
-                        <option value="Inactive">Inactivos</option>
                         <option value="Suspended">Suspendidos</option>
                         <option value="Left">Egresados</option>
                     </select>
@@ -334,7 +333,7 @@ function applyFilterAndRender() {
     const branchVal = document.getElementById('branch-filter').value;
     const statusVal = document.getElementById('status-filter').value;
 
-    let data = weeklyData;
+    let data = weeklyData.filter(emp => emp.status !== 'Inactive' && !emp.no_aplica_turno);
 
     if (branchVal) {
         data = data.filter(emp => emp.branch === branchVal);
@@ -1119,7 +1118,9 @@ function showEditEmployeeDialog(employeeName) {
 
             const dialog = new frappe.ui.Dialog({
                 title: __('Editar Empleado: ') + emp.employee_name,
+                size: 'large',
                 fields: [
+                    { fieldtype: 'Tab Break', fieldname: 'general_tab', label: __('General') },
                     { fieldname: 'first_name', fieldtype: 'Data', label: __('Primer Nombre'), reqd: 1, default: emp.first_name },
                     { fieldname: 'middle_name', fieldtype: 'Data', label: __('Segundo Nombre'), default: emp.middle_name },
                     { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos'), default: emp.last_name },
@@ -1128,15 +1129,27 @@ function showEditEmployeeDialog(employeeName) {
                     { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación'), reqd: 1, default: emp.custom_identificacion },
                     { fieldname: 'gender', fieldtype: 'Select', label: __('Género'), options: '\nMale\nFemale\nOther', reqd: 1, default: emp.gender },
                     { fieldname: 'status', fieldtype: 'Select', label: __('Estado'), options: '\nActive\nInactive\nSuspended\nLeft', reqd: 1, default: emp.status },
-                    { fieldname: 'relieving_date', fieldtype: 'Date', label: __('Fecha de Salida'), depends_on: 'eval:doc.status=="Left"' },
+                    { fieldname: 'relieving_date', fieldtype: 'Date', label: __('Fecha de Salida'), depends_on: 'eval:doc.status=="Left"', default: emp.relieving_date },
                     { fieldtype: 'Section Break' },
                     { fieldname: 'date_of_joining', fieldtype: 'Date', label: __('Fecha de Ingreso'), reqd: 1, default: emp.date_of_joining },
                     { fieldname: 'branch', fieldtype: 'Link', options: 'Branch', label: __('Sucursal (Branch)'), default: emp.branch },
-                    { fieldtype: 'Section Break' },
+                    { fieldname: 'no_aplica_turno', fieldtype: 'Check', label: __('No aplica turno'), default: emp.no_aplica_turno || 0 },
+                    { fieldtype: 'Tab Break', fieldname: 'bank_tab', label: __('Banco') },
+                    { fieldname: 'bank_name', fieldtype: 'Data', label: __('Banco'), default: emp.bank_name },
+                    { fieldtype: 'Column Break' },
+                    { fieldname: 'bank_ac_no', fieldtype: 'Data', label: __('No. Cuenta Bancaria'), default: emp.bank_ac_no },
+                    { fieldtype: 'Tab Break', fieldname: 'emergency_tab', label: __('Emergencia') },
+                    { fieldname: 'person_to_be_contacted', fieldtype: 'Data', label: __('Persona de Contacto'), default: emp.person_to_be_contacted },
+                    { fieldname: 'emergency_phone_number', fieldtype: 'Data', label: __('Telefono de Emergencia'), default: emp.emergency_phone_number },
+                    { fieldtype: 'Column Break' },
+                    { fieldname: 'relation', fieldtype: 'Data', label: __('Relacion'), default: emp.relation },
+                    { fieldtype: 'Tab Break', fieldname: 'observations_tab', label: __('Observaciones') },
+                    { fieldname: 'bio', fieldtype: 'Small Text', label: __('Bio'), default: emp.bio },
+                    { fieldtype: 'Tab Break', fieldname: 'device_tab', label: __('Dispositivo') },
                     { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
                     { fieldtype: 'HTML', fieldname: 'btn_unlink' },
                     // ── Cambio de contraseña ──
-                    { fieldtype: 'Section Break', label: __('Acceso al Sistema') },
+                    { fieldtype: 'Tab Break', fieldname: 'access_tab', label: __('Acceso') },
                     {
                         fieldname: 'new_password',
                         fieldtype: 'Password',
@@ -1169,6 +1182,12 @@ function showEditEmployeeDialog(employeeName) {
                     let db_values = Object.assign({}, values);
                     delete db_values.new_password;
                     delete db_values.disable_user;
+                    delete db_values.general_tab;
+                    delete db_values.bank_tab;
+                    delete db_values.emergency_tab;
+                    delete db_values.observations_tab;
+                    delete db_values.device_tab;
+                    delete db_values.access_tab;
                     if (db_values.status !== 'Left') {
                         db_values.relieving_date = null;
                     }
