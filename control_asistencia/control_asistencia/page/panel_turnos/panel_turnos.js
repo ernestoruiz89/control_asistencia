@@ -1105,6 +1105,77 @@ function showAddEmployeeDialog() {
     });
 }
 
+function showCreateUserForEmployeeDialog(emp, parentDialog) {
+    const roleOptions = [
+        { label: __('Personal (Solo consulta)'), value: 'Employee' },
+        { label: __('Supervisor'), value: 'HR User' },
+        { label: __('Administrador RRHH'), value: 'HR Manager' },
+        { label: __('Administrador Sistema'), value: 'System Manager' },
+    ];
+    const defaultEmail = emp.prefered_email || emp.company_email || emp.personal_email || '';
+
+    const dialog = new frappe.ui.Dialog({
+        title: __('Crear Usuario: ') + emp.employee_name,
+        size: 'small',
+        fields: [
+            {
+                fieldname: 'email',
+                fieldtype: 'Data',
+                label: __('Correo Electronico'),
+                reqd: 1,
+                default: defaultEmail,
+                description: __('Se usara como usuario de ingreso al sistema.'),
+            },
+            {
+                fieldname: 'user_role',
+                fieldtype: 'Select',
+                label: __('Rol en el Sistema'),
+                options: roleOptions,
+                default: 'Employee',
+            },
+            {
+                fieldname: 'password',
+                fieldtype: 'Password',
+                label: __('Contrasena de Acceso'),
+                description: __('Si se deja vacio, el empleado debera solicitar su contrasena.'),
+            },
+        ],
+        primary_action_label: __('Crear Usuario'),
+        primary_action(values) {
+            if (!values.email) {
+                frappe.msgprint(__('El campo <b>Correo Electronico</b> es obligatorio.'));
+                return;
+            }
+
+            frappe.call({
+                method: `${API}.create_user_for_employee`,
+                args: {
+                    employee: emp.name,
+                    email: values.email || '',
+                    user_role: values.user_role || 'Employee',
+                    password: values.password || '',
+                },
+                freeze: true,
+                freeze_message: __('Creando usuario...'),
+                callback({ message: res }) {
+                    if (!res) return;
+                    dialog.hide();
+                    parentDialog.hide();
+
+                    const msg = res.user_created
+                        ? __('Usuario del sistema creado y vinculado: <b>{0}</b>', [res.user])
+                        : __('El usuario <b>{0}</b> ya existia y fue vinculado.', [res.user]);
+                    frappe.msgprint({ title: __('Usuario Creado'), message: msg, indicator: 'green' });
+                    loadData();
+                    showEditEmployeeDialog(emp.name);
+                },
+            });
+        },
+    });
+
+    dialog.show();
+}
+
 function showEditEmployeeDialog(employeeName) {
     if (!employeeName) return;
 
@@ -1186,6 +1257,7 @@ function showEditEmployeeDialog(employeeName) {
                             ? __('Si está marcado, el usuario no podrá ingresar al sistema.')
                             : __('Sin usuario vinculado. No aplica.'),
                     },
+                    { fieldtype: 'HTML', fieldname: 'btn_create_user' },
                 ],
                 primary_action_label: __('Guardar Cambios'),
                 primary_action: function (values) {
@@ -1269,6 +1341,26 @@ function showEditEmployeeDialog(employeeName) {
                     </div>
                 `);
             }
+
+            if (!emp.user_id) {
+                dialog.fields_dict.btn_create_user.$wrapper.html(`
+                    <div style="margin-top: 12px;">
+                        <button class="btn btn-sm btn-primary" id="btn-create-employee-user">
+                            <i class="fa fa-user-plus"></i> ${__('Crear Usuario')}
+                        </button>
+                        <div class="text-muted" style="margin-top: 6px; font-size: 12px;">
+                            ${__('Crea y vincula un usuario del sistema para este empleado.')}
+                        </div>
+                    </div>
+                `);
+
+                dialog.fields_dict.btn_create_user.$wrapper.find('#btn-create-employee-user').on('click', () => {
+                    showCreateUserForEmployeeDialog(emp, dialog);
+                });
+            } else {
+                dialog.fields_dict.btn_create_user.$wrapper.empty();
+            }
+
             dialog.add_custom_action('Ver Registro Completo', () => {
                 frappe.set_route('Form', 'Employee', employeeName);
                 dialog.hide();

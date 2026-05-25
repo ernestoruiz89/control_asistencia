@@ -807,6 +807,62 @@ def update_employee_user_access(user, user_role=None, new_password=None, enabled
 
 
 @frappe.whitelist()
+def create_user_for_employee(employee, email, user_role="Employee", password=None):
+    if not employee:
+        frappe.throw(_("Empleado no especificado."))
+    if not email:
+        frappe.throw(_("Correo electronico no especificado."))
+
+    if user_role not in SHIFT_PANEL_USER_ROLES:
+        frappe.throw(_("Rol no permitido: {0}").format(user_role))
+
+    emp_doc = frappe.get_doc("Employee", employee)
+    if emp_doc.user_id:
+        frappe.throw(_("Este empleado ya tiene un usuario vinculado: {0}").format(emp_doc.user_id))
+
+    email = email.strip().lower()
+    linked_employee = frappe.db.get_value("Employee", {"user_id": email}, "name")
+    if linked_employee and linked_employee != employee:
+        frappe.throw(_("El usuario {0} ya esta vinculado al empleado {1}.").format(email, linked_employee))
+
+    user_created = False
+    if not frappe.db.exists("User", email):
+        user_doc = frappe.get_doc({
+            "doctype": "User",
+            "email": email,
+            "first_name": emp_doc.first_name,
+            "last_name": emp_doc.last_name or "",
+            "send_welcome_email": 0,
+            "user_type": "System User",
+        })
+        if password:
+            user_doc.new_password = password
+        user_doc.insert(ignore_permissions=True)
+        user_created = True
+
+    frappe.db.set_value("Employee", emp_doc.name, {
+        "user_id": email,
+        "prefered_email": email,
+    })
+
+    update_employee_user_access(
+        user=email,
+        user_role=user_role,
+        new_password=password if not user_created else None,
+        enabled=1,
+    )
+    frappe.db.commit()
+
+    return {
+        "employee": emp_doc.name,
+        "employee_name": emp_doc.employee_name,
+        "user": email,
+        "user_created": user_created,
+        "user_role": get_shift_panel_user_role(email),
+    }
+
+
+@frappe.whitelist()
 def create_employee_with_user(
     first_name,
     last_name=None,
