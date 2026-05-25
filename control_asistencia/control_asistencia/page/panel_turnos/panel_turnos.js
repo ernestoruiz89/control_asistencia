@@ -1120,7 +1120,7 @@ function showEditEmployeeDialog(employeeName) {
                 title: __('Editar Empleado: ') + emp.employee_name,
                 size: 'large',
                 fields: [
-                    { fieldtype: 'Tab Break', fieldname: 'general_tab', label: __('General') },
+                    { fieldtype: 'Section Break', label: __('General') },
                     { fieldname: 'first_name', fieldtype: 'Data', label: __('Primer Nombre'), reqd: 1, default: emp.first_name },
                     { fieldname: 'middle_name', fieldtype: 'Data', label: __('Segundo Nombre'), default: emp.middle_name },
                     { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos'), default: emp.last_name },
@@ -1182,7 +1182,6 @@ function showEditEmployeeDialog(employeeName) {
                     let db_values = Object.assign({}, values);
                     delete db_values.new_password;
                     delete db_values.disable_user;
-                    delete db_values.general_tab;
                     delete db_values.bank_tab;
                     delete db_values.emergency_tab;
                     delete db_values.observations_tab;
