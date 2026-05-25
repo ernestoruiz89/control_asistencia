@@ -1134,22 +1134,22 @@ function showEditEmployeeDialog(employeeName) {
                     { fieldname: 'date_of_joining', fieldtype: 'Date', label: __('Fecha de Ingreso'), reqd: 1, default: emp.date_of_joining },
                     { fieldname: 'branch', fieldtype: 'Link', options: 'Branch', label: __('Sucursal (Branch)'), default: emp.branch },
                     { fieldname: 'no_aplica_turno', fieldtype: 'Check', label: __('No aplica turno'), default: emp.no_aplica_turno || 0 },
-                    { fieldtype: 'Tab Break', fieldname: 'bank_tab', label: __('Banco') },
+                    { fieldtype: 'Section Break', label: __('Banco'), collapsible: 1 },
                     { fieldname: 'bank_name', fieldtype: 'Data', label: __('Banco'), default: emp.bank_name },
                     { fieldtype: 'Column Break' },
                     { fieldname: 'bank_ac_no', fieldtype: 'Data', label: __('No. Cuenta Bancaria'), default: emp.bank_ac_no },
-                    { fieldtype: 'Tab Break', fieldname: 'emergency_tab', label: __('Emergencia') },
+                    { fieldtype: 'Section Break', label: __('Emergencia'), collapsible: 1 },
                     { fieldname: 'person_to_be_contacted', fieldtype: 'Data', label: __('Persona de Contacto'), default: emp.person_to_be_contacted },
                     { fieldname: 'emergency_phone_number', fieldtype: 'Data', label: __('Telefono de Emergencia'), default: emp.emergency_phone_number },
                     { fieldtype: 'Column Break' },
                     { fieldname: 'relation', fieldtype: 'Data', label: __('Relacion'), default: emp.relation },
-                    { fieldtype: 'Tab Break', fieldname: 'observations_tab', label: __('Observaciones') },
+                    { fieldtype: 'Section Break', label: __('Observaciones'), collapsible: 1 },
                     { fieldname: 'bio', fieldtype: 'Small Text', label: __('Bio'), default: emp.bio },
-                    { fieldtype: 'Tab Break', fieldname: 'device_tab', label: __('Dispositivo') },
+                    { fieldtype: 'Section Break', label: __('Dispositivo'), collapsible: 1 },
                     { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
                     { fieldtype: 'HTML', fieldname: 'btn_unlink' },
                     // ── Cambio de contraseña ──
-                    { fieldtype: 'Tab Break', fieldname: 'access_tab', label: __('Acceso') },
+                    { fieldtype: 'Section Break', label: __('Acceso'), collapsible: 1 },
                     {
                         fieldname: 'new_password',
                         fieldtype: 'Password',
@@ -1182,11 +1182,6 @@ function showEditEmployeeDialog(employeeName) {
                     let db_values = Object.assign({}, values);
                     delete db_values.new_password;
                     delete db_values.disable_user;
-                    delete db_values.bank_tab;
-                    delete db_values.emergency_tab;
-                    delete db_values.observations_tab;
-                    delete db_values.device_tab;
-                    delete db_values.access_tab;
                     if (db_values.status !== 'Left') {
                         db_values.relieving_date = null;
                     }
