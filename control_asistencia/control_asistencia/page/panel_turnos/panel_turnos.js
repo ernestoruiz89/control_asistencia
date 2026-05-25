@@ -1115,6 +1115,12 @@ function showEditEmployeeDialog(employeeName) {
         callback: function (r) {
             if (!r.message) return;
             const emp = r.message;
+            const roleOptions = [
+                { label: __('Personal (Solo consulta)'), value: 'Employee' },
+                { label: __('Supervisor'), value: 'HR User' },
+                { label: __('Administrador RRHH'), value: 'HR Manager' },
+                { label: __('Administrador Sistema'), value: 'System Manager' },
+            ];
 
             const dialog = new frappe.ui.Dialog({
                 title: __('Editar Empleado: ') + emp.employee_name,
@@ -1151,6 +1157,17 @@ function showEditEmployeeDialog(employeeName) {
                     // ── Cambio de contraseña ──
                     { fieldtype: 'Section Break', label: __('Acceso') },
                     {
+                        fieldname: 'user_role',
+                        fieldtype: 'Select',
+                        label: __('Rol en el Sistema'),
+                        options: roleOptions,
+                        default: emp.user_id ? '' : 'Employee',
+                        read_only: emp.user_id ? 0 : 1,
+                        description: emp.user_id
+                            ? __('Rol principal administrado desde este panel.')
+                            : __('Este empleado no tiene usuario del sistema vinculado.'),
+                    },
+                    {
                         fieldname: 'new_password',
                         fieldtype: 'Password',
                         label: __('Nueva Contraseña'),
@@ -1179,9 +1196,11 @@ function showEditEmployeeDialog(employeeName) {
                     // Separar campos que no van al Employee
                     const new_password = values.new_password || '';
                     const disable_user = values.disable_user;
+                    const user_role = values.user_role || '';
                     let db_values = Object.assign({}, values);
                     delete db_values.new_password;
                     delete db_values.disable_user;
+                    delete db_values.user_role;
                     if (db_values.status !== 'Left') {
                         db_values.relieving_date = null;
                     }
@@ -1198,16 +1217,13 @@ function showEditEmployeeDialog(employeeName) {
                                 return;
                             }
 
-                            // Construir los campos a actualizar en el User
-                            const userFields = { enabled: disable_user ? 0 : 1 };
-                            if (new_password) userFields.new_password = new_password;
-
                             frappe.call({
-                                method: 'frappe.client.set_value',
+                                method: `${API}.update_employee_user_access`,
                                 args: {
-                                    doctype: 'User',
-                                    name: emp.user_id,
-                                    fieldname: userFields,
+                                    user: emp.user_id,
+                                    user_role,
+                                    new_password,
+                                    enabled: disable_user ? 0 : 1,
                                 },
                                 freeze: true,
                                 callback: function () {
@@ -1259,6 +1275,17 @@ function showEditEmployeeDialog(employeeName) {
             });
 
             dialog.show();
+            if (emp.user_id) {
+                frappe.call({
+                    method: `${API}.get_shift_panel_user_role`,
+                    args: { user: emp.user_id },
+                    callback: ({ message }) => {
+                        if (message && dialog.fields_dict.user_role) {
+                            dialog.set_value('user_role', message);
+                        }
+                    },
+                });
+            }
         }
     });
 }

@@ -766,6 +766,46 @@ def _split_first_name(raw_name):
     return first, " ".join(rest)
 
 
+SHIFT_PANEL_USER_ROLES = ("Employee", "HR User", "HR Manager", "System Manager")
+
+
+@frappe.whitelist()
+def get_shift_panel_user_role(user):
+    if not user:
+        return "Employee"
+
+    roles = set(frappe.get_roles(user))
+    for role in reversed(SHIFT_PANEL_USER_ROLES):
+        if role in roles:
+            return role
+    return "Employee"
+
+
+@frappe.whitelist()
+def update_employee_user_access(user, user_role=None, new_password=None, enabled=1):
+    if not user:
+        frappe.throw(_("Usuario no especificado."))
+
+    user_doc = frappe.get_doc("User", user)
+    user_doc.enabled = 1 if int(enabled or 0) else 0
+
+    if new_password:
+        user_doc.new_password = new_password
+
+    if user_role:
+        if user_role not in SHIFT_PANEL_USER_ROLES:
+            frappe.throw(_("Rol no permitido: {0}").format(user_role))
+
+        managed_roles = set(SHIFT_PANEL_USER_ROLES)
+        existing_roles = [{"role": row.role} for row in user_doc.get("roles", []) if row.role not in managed_roles]
+        user_doc.set("roles", existing_roles)
+        user_doc.append("roles", {"role": user_role})
+
+    user_doc.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"user": user_doc.name, "user_role": get_shift_panel_user_role(user_doc.name)}
+
+
 @frappe.whitelist()
 def create_employee_with_user(
     first_name,
