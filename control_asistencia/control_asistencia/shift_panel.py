@@ -652,7 +652,15 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
         "status": "Open",
         "leave_approver": _get_leave_approver(employee.name),
     })
-    doc.insert(ignore_permissions=True)
+    try:
+        doc.insert(ignore_permissions=True)
+    except Exception as e:
+        error_msg = str(e)
+        if "Periodo de aplicacion no puede ser" in error_msg or "Application period cannot be outside Leave Allocation" in error_msg:
+            frappe.throw("No tienes días de vacaciones o licencia asignados para este periodo.")
+        else:
+            raise
+
     frappe.db.commit()
     notify_shift_panel_update(doc, None)
     return {"name": doc.name}
