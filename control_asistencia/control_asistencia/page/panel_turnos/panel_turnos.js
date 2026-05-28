@@ -1293,7 +1293,7 @@ function showEditEmployeeDialog(employeeName) {
                         { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos'), default: emp.last_name },
                         { fieldname: 'date_of_birth', fieldtype: 'Date', label: __('Fecha de Nacimiento'), reqd: 1, default: emp.date_of_birth },
                         { fieldtype: 'Column Break' },
-                        { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación'), reqd: 1, default: emp.custom_identificacion },
+                        { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación'), reqd: 0, default: emp.custom_identificacion },
                         { fieldname: 'gender', fieldtype: 'Select', label: __('Género'), options: '\nMale\nFemale\nOther', reqd: 1, default: emp.gender },
                         { fieldname: 'status', fieldtype: 'Select', label: __('Estado'), options: '\nActive\nInactive\nSuspended\nLeft', reqd: 1, default: emp.status },
                         { fieldname: 'relieving_date', fieldtype: 'Date', label: __('Fecha de Salida'), depends_on: 'eval:doc.status=="Left"', default: emp.relieving_date },
