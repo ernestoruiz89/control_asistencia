@@ -685,13 +685,14 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
             })
     else:
         # No existe ninguna asignación, creamos una nueva que cubra el año completo
-        from frappe.utils import get_year_start, get_year_end
+        year_start = f"{start.year}-01-01"
+        year_end = f"{end.year}-12-31"
         alloc_doc = frappe.get_doc({
             "doctype": "Leave Allocation",
             "employee": employee.name,
             "leave_type": leave_type,
-            "from_date": get_year_start(start),
-            "to_date": get_year_end(end),
+            "from_date": year_start,
+            "to_date": year_end,
             "new_leaves_allocated": 30,
             "description": "Auto-asignado por sistema móvil"
         })
