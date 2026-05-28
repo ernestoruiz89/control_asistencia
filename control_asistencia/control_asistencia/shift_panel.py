@@ -826,12 +826,15 @@ def get_shift_panel_user_role(user):
 
 
 @frappe.whitelist()
-def update_employee_user_access(user, user_role=None, new_password=None, enabled=1):
+def update_employee_user_access(user, user_role=None, new_password=None, enabled=1, username=None):
     if not user:
         frappe.throw(_("Usuario no especificado."))
 
     user_doc = frappe.get_doc("User", user)
     user_doc.enabled = 1 if int(enabled or 0) else 0
+
+    if username is not None:
+        user_doc.username = username
 
     if new_password:
         user_doc.new_password = new_password
@@ -863,6 +866,7 @@ def create_employee_with_user(
     branch=None,
     user_role="Employee",
     password=None,
+    username=None,
 ):
     """Alta Rápida de Empleado.
 
@@ -922,6 +926,7 @@ def create_employee_with_user(
                 "email": email,
                 "first_name": actual_first,
                 "last_name": last_name or "",
+                "username": username,
                 "send_welcome_email": 0,
                 "user_type": "System User",
             })

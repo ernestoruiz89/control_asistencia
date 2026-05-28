@@ -991,6 +991,12 @@ function showAddEmployeeDialog() {
                     label: __('Correo Electrónico'),
                     description: __('Se usará como usuario de ingreso al sistema.'),
                 },
+                {
+                    fieldname: 'username',
+                    fieldtype: 'Data',
+                    label: __('Nombre de Usuario'),
+                    description: __('Opcional. Alias corto para el inicio de sesión.'),
+                },
                 { fieldtype: 'Column Break' },
                 {
                     fieldname: 'last_name',
@@ -1082,6 +1088,7 @@ function showAddEmployeeDialog() {
                         branch: values.branch || '',
                         user_role: values.user_role || 'Employee',
                         password: values.password || '',
+                        username: values.username || '',
                     },
                     freeze: true,
                     freeze_message: __('Creando empleado...'),
@@ -1127,6 +1134,12 @@ function showCreateUserForEmployeeDialog(emp, parentDialog) {
                 description: __('Se usara como usuario de ingreso al sistema.'),
             },
             {
+                fieldname: 'username',
+                fieldtype: 'Data',
+                label: __('Nombre de Usuario'),
+                description: __('Opcional. Alias corto para el inicio de sesión.'),
+            },
+            {
                 fieldname: 'user_role',
                 fieldtype: 'Select',
                 label: __('Rol en el Sistema'),
@@ -1150,6 +1163,7 @@ function showCreateUserForEmployeeDialog(emp, parentDialog) {
             const email = (values.email || '').trim().toLowerCase();
             const userRole = values.user_role || 'Employee';
             const password = values.password || '';
+            const username = values.username || '';
 
             frappe.call({
                 method: 'frappe.client.get_value',
@@ -1197,6 +1211,7 @@ function showCreateUserForEmployeeDialog(emp, parentDialog) {
                                                 user_role: userRole,
                                                 new_password: password,
                                                 enabled: 1,
+                                                username: username,
                                             },
                                             freeze: true,
                                             callback() {
@@ -1228,6 +1243,7 @@ function showCreateUserForEmployeeDialog(emp, parentDialog) {
                                         email: email,
                                         first_name: emp.first_name || emp.employee_name || email,
                                         last_name: emp.last_name || '',
+                                        username: username,
                                         send_welcome_email: 0,
                                         user_type: 'System User',
                                     },
@@ -1264,190 +1280,208 @@ function showEditEmployeeDialog(employeeName) {
                 { label: __('Administrador Sistema'), value: 'System Manager' },
             ];
 
-            const dialog = new frappe.ui.Dialog({
-                title: __('Editar Empleado: ') + emp.employee_name,
-                size: 'large',
-                fields: [
-                    { fieldtype: 'Section Break', label: __('General') },
-                    { fieldname: 'first_name', fieldtype: 'Data', label: __('Primer Nombre'), reqd: 1, default: emp.first_name },
-                    { fieldname: 'middle_name', fieldtype: 'Data', label: __('Segundo Nombre'), default: emp.middle_name },
-                    { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos'), default: emp.last_name },
-                    { fieldname: 'date_of_birth', fieldtype: 'Date', label: __('Fecha de Nacimiento'), reqd: 1, default: emp.date_of_birth },
-                    { fieldtype: 'Column Break' },
-                    { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación'), reqd: 1, default: emp.custom_identificacion },
-                    { fieldname: 'gender', fieldtype: 'Select', label: __('Género'), options: '\nMale\nFemale\nOther', reqd: 1, default: emp.gender },
-                    { fieldname: 'status', fieldtype: 'Select', label: __('Estado'), options: '\nActive\nInactive\nSuspended\nLeft', reqd: 1, default: emp.status },
-                    { fieldname: 'relieving_date', fieldtype: 'Date', label: __('Fecha de Salida'), depends_on: 'eval:doc.status=="Left"', default: emp.relieving_date },
-                    { fieldtype: 'Section Break', label: __('Laboral') },
-                    { fieldname: 'date_of_joining', fieldtype: 'Date', label: __('Fecha de Ingreso'), reqd: 1, default: emp.date_of_joining },
-                    { fieldname: 'branch', fieldtype: 'Link', options: 'Branch', label: __('Sucursal (Branch)'), default: emp.branch },
-                    { fieldname: 'no_aplica_turno', fieldtype: 'Check', label: __('No aplica turno'), default: emp.no_aplica_turno || 0 },
-                    { fieldtype: 'Section Break', label: __('Banco') },
-                    { fieldname: 'bank_name', fieldtype: 'Data', label: __('Banco'), default: emp.bank_name },
-                    { fieldtype: 'Column Break' },
-                    { fieldname: 'bank_ac_no', fieldtype: 'Data', label: __('No. Cuenta Bancaria'), default: emp.bank_ac_no },
-                    { fieldtype: 'Section Break', label: __('Emergencia') },
-                    { fieldname: 'person_to_be_contacted', fieldtype: 'Data', label: __('Persona de Contacto'), default: emp.person_to_be_contacted },
-                    { fieldname: 'emergency_phone_number', fieldtype: 'Data', label: __('Telefono de Emergencia'), default: emp.emergency_phone_number },
-                    { fieldtype: 'Column Break' },
-                    { fieldname: 'relation', fieldtype: 'Data', label: __('Relacion'), default: emp.relation },
-                    { fieldtype: 'Section Break', label: __('Observaciones') },
-                    { fieldname: 'bio', fieldtype: 'Small Text', label: __('Bio'), default: emp.bio },
-                    { fieldtype: 'Section Break', label: __('Dispositivo') },
-                    { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
-                    { fieldtype: 'HTML', fieldname: 'btn_unlink' },
-                    // ── Cambio de contraseña ──
-                    { fieldtype: 'Section Break', label: __('Acceso') },
-                    {
-                        fieldname: 'user_role',
-                        fieldtype: 'Select',
-                        label: __('Rol en el Sistema'),
-                        options: roleOptions,
-                        default: emp.user_id ? '' : 'Employee',
-                        read_only: emp.user_id ? 0 : 1,
-                        description: emp.user_id
-                            ? __('Rol principal administrado desde este panel.')
-                            : __('Este empleado no tiene usuario del sistema vinculado.'),
-                    },
-                    {
-                        fieldname: 'new_password',
-                        fieldtype: 'Password',
-                        label: __('Nueva Contraseña'),
-                        description: emp.user_id
-                            ? __('Usuario vinculado: {0}. Dejá vacío para no cambiarla.', [emp.user_id])
-                            : __('Este empleado no tiene usuario del sistema vinculado.'),
-                        read_only: emp.user_id ? 0 : 1,
-                    },
-                    {
-                        fieldname: 'disable_user',
-                        fieldtype: 'Check',
-                        label: __('Desactivar usuario del sistema'),
-                        default: (emp.user_id && emp.status !== 'Active') ? 1 : 0,
-                        read_only: emp.user_id ? 0 : 1,
-                        description: emp.user_id
-                            ? __('Si está marcado, el usuario no podrá ingresar al sistema.')
-                            : __('Sin usuario vinculado. No aplica.'),
-                    },
-                    { fieldtype: 'HTML', fieldname: 'btn_create_user' },
-                ],
-                primary_action_label: __('Guardar Cambios'),
-                primary_action: function (values) {
-                    if (values.status === 'Left' && !values.relieving_date) {
-                        frappe.msgprint(__('La <b>Fecha de Salida</b> es requerida cuando el estado es "Left".'));
-                        return;
-                    }
-                    // Separar campos que no van al Employee
-                    const new_password = values.new_password || '';
-                    const disable_user = values.disable_user;
-                    const user_role = values.user_role || '';
-                    let db_values = Object.assign({}, values);
-                    delete db_values.new_password;
-                    delete db_values.disable_user;
-                    delete db_values.user_role;
-                    if (db_values.status !== 'Left') {
-                        db_values.relieving_date = null;
-                    }
-
-                    frappe.call({
-                        method: 'frappe.client.set_value',
-                        args: { doctype: 'Employee', name: employeeName, fieldname: db_values },
-                        freeze: true,
-                        callback: function () {
-                            if (!emp.user_id) {
-                                frappe.show_alert({ message: __('Datos actualizados.'), indicator: 'green' });
-                                dialog.hide();
-                                loadData();
-                                return;
-                            }
-
-                            frappe.call({
-                                method: `${API}.update_employee_user_access`,
-                                args: {
-                                    user: emp.user_id,
-                                    user_role,
-                                    new_password,
-                                    enabled: disable_user ? 0 : 1,
-                                },
-                                freeze: true,
-                                callback: function () {
-                                    const msg = new_password
-                                        ? __('Datos, contraseña y acceso actualizados.')
-                                        : __('Datos y acceso al sistema actualizados.');
-                                    frappe.show_alert({ message: msg, indicator: 'green' });
-                                    dialog.hide();
-                                    loadData();
-                                }
-                            });
+            const renderDialog = (existingUsername) => {
+                const dialog = new frappe.ui.Dialog({
+                    title: __('Editar Empleado: ') + emp.employee_name,
+                    size: 'large',
+                    fields: [
+                        { fieldtype: 'Section Break', label: __('General') },
+                        { fieldname: 'first_name', fieldtype: 'Data', label: __('Primer Nombre'), reqd: 1, default: emp.first_name },
+                        { fieldname: 'middle_name', fieldtype: 'Data', label: __('Segundo Nombre'), default: emp.middle_name },
+                        { fieldname: 'last_name', fieldtype: 'Data', label: __('Apellidos'), default: emp.last_name },
+                        { fieldname: 'date_of_birth', fieldtype: 'Date', label: __('Fecha de Nacimiento'), reqd: 1, default: emp.date_of_birth },
+                        { fieldtype: 'Column Break' },
+                        { fieldname: 'custom_identificacion', fieldtype: 'Data', label: __('Identificación'), reqd: 1, default: emp.custom_identificacion },
+                        { fieldname: 'gender', fieldtype: 'Select', label: __('Género'), options: '\nMale\nFemale\nOther', reqd: 1, default: emp.gender },
+                        { fieldname: 'status', fieldtype: 'Select', label: __('Estado'), options: '\nActive\nInactive\nSuspended\nLeft', reqd: 1, default: emp.status },
+                        { fieldname: 'relieving_date', fieldtype: 'Date', label: __('Fecha de Salida'), depends_on: 'eval:doc.status=="Left"', default: emp.relieving_date },
+                        { fieldtype: 'Section Break', label: __('Laboral') },
+                        { fieldname: 'date_of_joining', fieldtype: 'Date', label: __('Fecha de Ingreso'), reqd: 1, default: emp.date_of_joining },
+                        { fieldname: 'branch', fieldtype: 'Link', options: 'Branch', label: __('Sucursal (Branch)'), default: emp.branch },
+                        { fieldname: 'no_aplica_turno', fieldtype: 'Check', label: __('No aplica turno'), default: emp.no_aplica_turno || 0 },
+                        { fieldtype: 'Section Break', label: __('Banco') },
+                        { fieldname: 'bank_name', fieldtype: 'Data', label: __('Banco'), default: emp.bank_name },
+                        { fieldtype: 'Column Break' },
+                        { fieldname: 'bank_ac_no', fieldtype: 'Data', label: __('No. Cuenta Bancaria'), default: emp.bank_ac_no },
+                        { fieldtype: 'Section Break', label: __('Emergencia') },
+                        { fieldname: 'person_to_be_contacted', fieldtype: 'Data', label: __('Persona de Contacto'), default: emp.person_to_be_contacted },
+                        { fieldname: 'emergency_phone_number', fieldtype: 'Data', label: __('Telefono de Emergencia'), default: emp.emergency_phone_number },
+                        { fieldtype: 'Column Break' },
+                        { fieldname: 'relation', fieldtype: 'Data', label: __('Relacion'), default: emp.relation },
+                        { fieldtype: 'Section Break', label: __('Observaciones') },
+                        { fieldname: 'bio', fieldtype: 'Small Text', label: __('Bio'), default: emp.bio },
+                        { fieldtype: 'Section Break', label: __('Dispositivo') },
+                        { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
+                        { fieldtype: 'HTML', fieldname: 'btn_unlink' },
+                        { fieldtype: 'Section Break', label: __('Acceso') },
+                        {
+                            fieldname: 'user_role',
+                            fieldtype: 'Select',
+                            label: __('Rol en el Sistema'),
+                            options: roleOptions,
+                            default: emp.user_id ? '' : 'Employee',
+                            read_only: emp.user_id ? 0 : 1,
+                            description: emp.user_id
+                                ? __('Rol principal administrado desde este panel.')
+                                : __('Este empleado no tiene usuario del sistema vinculado.'),
+                        },
+                        {
+                            fieldname: 'new_password',
+                            fieldtype: 'Password',
+                            label: __('Nueva Contraseña'),
+                            description: emp.user_id
+                                ? __('Usuario vinculado: {0}. Dejá vacío para no cambiarla.', [emp.user_id])
+                                : __('Este empleado no tiene usuario del sistema vinculado.'),
+                            read_only: emp.user_id ? 0 : 1,
+                        },
+                        {
+                            fieldname: 'username',
+                            fieldtype: 'Data',
+                            label: __('Nombre de Usuario'),
+                            default: existingUsername,
+                            description: emp.user_id
+                                ? __('Opcional. Alias corto para el inicio de sesión.')
+                                : __('Este empleado no tiene usuario del sistema vinculado.'),
+                            read_only: emp.user_id ? 0 : 1,
+                        },
+                        {
+                            fieldname: 'disable_user',
+                            fieldtype: 'Check',
+                            label: __('Desactivar usuario del sistema'),
+                            default: (emp.user_id && emp.status !== 'Active') ? 1 : 0,
+                            read_only: emp.user_id ? 0 : 1,
+                            description: emp.user_id
+                                ? __('Si está marcado, el usuario no podrá ingresar al sistema.')
+                                : __('Sin usuario vinculado. No aplica.'),
+                        },
+                        { fieldtype: 'HTML', fieldname: 'btn_create_user' },
+                    ],
+                    primary_action_label: __('Guardar Cambios'),
+                    primary_action: function (values) {
+                        if (values.status === 'Left' && !values.relieving_date) {
+                            frappe.msgprint(__('La <b>Fecha de Salida</b> es requerida cuando el estado es "Left".'));
+                            return;
                         }
-                    });
-                }
-            });
+                        const new_password = values.new_password || '';
+                        const disable_user = values.disable_user;
+                        const user_role = values.user_role || '';
+                        const username = values.username || '';
+                        let db_values = Object.assign({}, values);
+                        delete db_values.new_password;
+                        delete db_values.disable_user;
+                        delete db_values.user_role;
+                        delete db_values.username;
+                        if (db_values.status !== 'Left') {
+                            db_values.relieving_date = null;
+                        }
 
-            if (emp.attendance_device_id) {
-                dialog.fields_dict.btn_unlink.$wrapper.html(`
-                    <div style="margin-top: 15px;">
-                        <button class="btn btn-sm btn-danger" id="btn-desvincular-mac">
-                            <i class="fa fa-trash"></i> Desvincular Computadora
-                        </button>
-                    </div>
-                `);
-
-                dialog.fields_dict.btn_unlink.$wrapper.find('#btn-desvincular-mac').on('click', () => {
-                    frappe.confirm('Al desvincular el equipo, la aplicación de escritorio creará automáticamente una vinculación como si fuera la primera vez durante la próxima marcación del empleado.<br><br>¿Seguro de desvincular la MAC?', () => {
                         frappe.call({
                             method: 'frappe.client.set_value',
-                            args: { doctype: 'Employee', name: employeeName, fieldname: 'attendance_device_id', value: '' },
+                            args: { doctype: 'Employee', name: employeeName, fieldname: db_values },
                             freeze: true,
                             callback: function () {
-                                frappe.msgprint({ title: 'Computadora Desvinculada', message: 'El dispositivo ha quedado desvinculado con éxito. Se registrará la nueva MAC automáticamente cuando el empleado registre asistencia.', indicator: 'orange' });
-                                dialog.hide();
+                                if (!emp.user_id) {
+                                    frappe.show_alert({ message: __('Datos actualizados.'), indicator: 'green' });
+                                    dialog.hide();
+                                    loadData();
+                                    return;
+                                }
+
+                                frappe.call({
+                                    method: `${API}.update_employee_user_access`,
+                                    args: {
+                                        user: emp.user_id,
+                                        user_role,
+                                        new_password,
+                                        enabled: disable_user ? 0 : 1,
+                                        username,
+                                    },
+                                    freeze: true,
+                                    callback: function () {
+                                        frappe.show_alert({ message: __('Datos guardados correctamente.'), indicator: 'green' });
+                                        dialog.hide();
+                                        loadData();
+                                    }
+                                });
                             }
                         });
-                    });
+                    }
                 });
-            } else {
-                dialog.fields_dict.btn_unlink.$wrapper.html(`
-                    <div style="margin-top: 15px; color: #7f8c8d; font-size: 0.9em; font-style: italic;">
-                        El empleado no tiene ninguna computadora vinculada actualmente.
-                    </div>
-                `);
-            }
 
-            if (!emp.user_id) {
-                dialog.fields_dict.btn_create_user.$wrapper.html(`
-                    <div style="margin-top: 12px;">
-                        <button class="btn btn-sm btn-primary" id="btn-create-employee-user">
-                            <i class="fa fa-user-plus"></i> ${__('Crear Usuario')}
-                        </button>
-                        <div class="text-muted" style="margin-top: 6px; font-size: 12px;">
-                            ${__('Crea y vincula un usuario del sistema para este empleado.')}
+                if (emp.attendance_device_id) {
+                    dialog.fields_dict.btn_unlink.$wrapper.html(`
+                        <div style="margin-top: 15px;">
+                            <button class="btn btn-sm btn-danger" id="btn-desvincular-mac">
+                                <i class="fa fa-trash"></i> Desvincular Computadora
+                            </button>
                         </div>
-                    </div>
-                `);
+                    `);
 
-                dialog.fields_dict.btn_create_user.$wrapper.find('#btn-create-employee-user').on('click', () => {
-                    showCreateUserForEmployeeDialog(emp, dialog);
+                    dialog.fields_dict.btn_unlink.$wrapper.find('#btn-desvincular-mac').on('click', () => {
+                        frappe.confirm('Al desvincular el equipo, la aplicación de escritorio creará automáticamente una vinculación como si fuera la primera vez durante la próxima marcación del empleado.<br><br>¿Seguro de desvincular la MAC?', () => {
+                            frappe.call({
+                                method: 'frappe.client.set_value',
+                                args: { doctype: 'Employee', name: employeeName, fieldname: 'attendance_device_id', value: '' },
+                                freeze: true,
+                                callback: function () {
+                                    frappe.msgprint({ title: 'Computadora Desvinculada', message: 'El dispositivo ha quedado desvinculado con éxito. Se registrará la nueva MAC automáticamente cuando el empleado registre asistencia.', indicator: 'orange' });
+                                    dialog.hide();
+                                }
+                            });
+                        });
+                    });
+                } else {
+                    dialog.fields_dict.btn_unlink.$wrapper.html(`
+                        <div style="margin-top: 15px; color: #7f8c8d; font-size: 0.9em; font-style: italic;">
+                            El empleado no tiene ninguna computadora vinculada actualmente.
+                        </div>
+                    `);
+                }
+
+                if (!emp.user_id) {
+                    dialog.fields_dict.btn_create_user.$wrapper.html(`
+                        <div style="margin-top: 12px;">
+                            <button class="btn btn-sm btn-primary" id="btn-create-employee-user">
+                                <i class="fa fa-user-plus"></i> ${__('Crear Usuario')}
+                            </button>
+                            <div class="text-muted" style="margin-top: 6px; font-size: 12px;">
+                                ${__('Crea y vincula un usuario del sistema para este empleado.')}
+                            </div>
+                        </div>
+                    `);
+
+                    dialog.fields_dict.btn_create_user.$wrapper.find('#btn-create-employee-user').on('click', () => {
+                        showCreateUserForEmployeeDialog(emp, dialog);
+                    });
+                } else {
+                    dialog.fields_dict.btn_create_user.$wrapper.empty();
+                }
+
+                dialog.add_custom_action('Ver Registro Completo', () => {
+                    frappe.set_route('Form', 'Employee', employeeName);
+                    dialog.hide();
+                });
+
+                dialog.show();
+                if (emp.user_id) {
+                    frappe.call({
+                        method: `${API}.get_shift_panel_user_role`,
+                        args: { user: emp.user_id },
+                        callback: ({ message }) => {
+                            if (message && dialog.fields_dict.user_role) {
+                                dialog.set_value('user_role', message);
+                            }
+                        },
+                    });
+                }
+            }; // End renderDialog function
+
+            if (emp.user_id) {
+                frappe.db.get_value('User', emp.user_id, 'username', (r) => {
+                    renderDialog(r.message ? r.message.username : '');
                 });
             } else {
-                dialog.fields_dict.btn_create_user.$wrapper.empty();
-            }
-
-            dialog.add_custom_action('Ver Registro Completo', () => {
-                frappe.set_route('Form', 'Employee', employeeName);
-                dialog.hide();
-            });
-
-            dialog.show();
-            if (emp.user_id) {
-                frappe.call({
-                    method: `${API}.get_shift_panel_user_role`,
-                    args: { user: emp.user_id },
-                    callback: ({ message }) => {
-                        if (message && dialog.fields_dict.user_role) {
-                            dialog.set_value('user_role', message);
-                        }
-                    },
-                });
+                renderDialog('');
             }
         }
     });
