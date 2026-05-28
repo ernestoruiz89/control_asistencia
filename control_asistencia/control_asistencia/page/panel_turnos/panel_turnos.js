@@ -1414,19 +1414,19 @@ function showEditEmployeeDialog(employeeName) {
                     dialog.fields_dict.btn_unlink.$wrapper.html(`
                         <div style="margin-top: 15px;">
                             <button class="btn btn-sm btn-danger" id="btn-desvincular-mac">
-                                <i class="fa fa-trash"></i> Desvincular Computadora
+                                <i class="fa fa-trash"></i> Desvincular Dispositivo
                             </button>
                         </div>
                     `);
 
                     dialog.fields_dict.btn_unlink.$wrapper.find('#btn-desvincular-mac').on('click', () => {
-                        frappe.confirm('Al desvincular el equipo, la aplicación de escritorio creará automáticamente una vinculación como si fuera la primera vez durante la próxima marcación del empleado.<br><br>¿Seguro de desvincular la MAC?', () => {
+                        frappe.confirm('Al desvincular el dispositivo, la aplicación de escritorio creará automáticamente una vinculación como si fuera la primera vez durante la próxima marcación del empleado.<br><br>¿Seguro de desvincular la MAC?', () => {
                             frappe.call({
                                 method: 'frappe.client.set_value',
                                 args: { doctype: 'Employee', name: employeeName, fieldname: 'attendance_device_id', value: '' },
                                 freeze: true,
                                 callback: function () {
-                                    frappe.msgprint({ title: 'Computadora Desvinculada', message: 'El dispositivo ha quedado desvinculado con éxito. Se registrará la nueva MAC automáticamente cuando el empleado registre asistencia.', indicator: 'orange' });
+                                    frappe.msgprint({ title: 'Dispositivo Desvinculado', message: 'El dispositivo ha quedado desvinculado con éxito. Se registrará la nueva MAC automáticamente cuando el empleado registre asistencia.', indicator: 'orange' });
                                     dialog.hide();
                                 }
                             });
@@ -1435,7 +1435,7 @@ function showEditEmployeeDialog(employeeName) {
                 } else {
                     dialog.fields_dict.btn_unlink.$wrapper.html(`
                         <div style="margin-top: 15px; color: #7f8c8d; font-size: 0.9em; font-style: italic;">
-                            El empleado no tiene ninguna computadora vinculada actualmente.
+                            El empleado no tiene ningún dispositivo vinculado actualmente.
                         </div>
                     `);
                 }
