@@ -640,6 +640,65 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
     if overlapping:
         frappe.throw(_("Ya existe una solicitud de vacaciones en ese rango."))
 
+    # ── Asegurar Asignación de Licencia con Fechas y Saldo Suficientes ──
+    allocations = frappe.db.get_all(
+        "Leave Allocation",
+        filters={
+            "employee": employee.name,
+            "leave_type": leave_type,
+            "docstatus": 1
+        },
+        fields=["name", "from_date", "to_date", "new_leaves_allocated"],
+        order_by="from_date asc"
+    )
+
+    if allocations:
+        # Buscar si alguna cubre completamente el rango start/end
+        covering_alloc = None
+        for alloc in allocations:
+            if getdate(alloc.from_date) <= start and getdate(alloc.to_date) >= end:
+                covering_alloc = alloc
+                break
+        
+        if covering_alloc:
+            # Asegurar saldo de días
+            new_leaves = float(covering_alloc.new_leaves_allocated or 0) + 30
+            frappe.db.set_value("Leave Allocation", covering_alloc.name, {
+                "new_leaves_allocated": new_leaves,
+                "total_leaves_allocated": new_leaves
+            })
+        else:
+            # Expandir la fecha de la asignación existente para que cubra la solicitud
+            target_alloc = allocations[0]
+            curr_from = getdate(target_alloc.from_date)
+            curr_to = getdate(target_alloc.to_date)
+            
+            new_from = start if start < curr_from else curr_from
+            new_to = end if end > curr_to else curr_to
+            new_leaves = float(target_alloc.new_leaves_allocated or 0) + 30
+            
+            frappe.db.set_value("Leave Allocation", target_alloc.name, {
+                "from_date": new_from,
+                "to_date": new_to,
+                "new_leaves_allocated": new_leaves,
+                "total_leaves_allocated": new_leaves
+            })
+    else:
+        # No existe ninguna asignación, creamos una nueva que cubra el año completo
+        from frappe.utils import get_year_start, get_year_end
+        alloc_doc = frappe.get_doc({
+            "doctype": "Leave Allocation",
+            "employee": employee.name,
+            "leave_type": leave_type,
+            "from_date": get_year_start(start),
+            "to_date": get_year_end(end),
+            "new_leaves_allocated": 30,
+            "description": "Auto-asignado por sistema móvil"
+        })
+        alloc_doc.insert(ignore_permissions=True)
+        alloc_doc.submit()
+
+    # Crear e insertar la solicitud de licencia
     doc = frappe.get_doc({
         "doctype": "Leave Application",
         "employee": employee.name,
@@ -653,50 +712,7 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
         "leave_approver": _get_leave_approver(employee.name),
     })
 
-    try:
-        doc.insert(ignore_permissions=True)
-    except Exception:
-        frappe.clear_messages()
-        from frappe.utils import get_year_start, get_year_end
-
-        existing = frappe.db.sql("""
-            SELECT name FROM `tabLeave Allocation` 
-            WHERE employee = %s AND leave_type = %s 
-            AND to_date >= %s AND from_date <= %s AND docstatus = 1
-        """, (employee.name, leave_type, start, end), as_dict=True)
-        
-        if existing:
-            for ex in existing:
-                ex_doc = frappe.get_doc("Leave Allocation", ex.name)
-                ex_doc.db_set("new_leaves_allocated", ex_doc.new_leaves_allocated + 30)
-                ex_doc.save(ignore_permissions=True)
-        else:
-            alloc_doc = frappe.get_doc({
-                "doctype": "Leave Allocation",
-                "employee": employee.name,
-                "leave_type": leave_type,
-                "from_date": get_year_start(start),
-                "to_date": get_year_end(end),
-                "new_leaves_allocated": 30,
-                "description": "Auto-asignado por sistema móvil"
-            })
-            alloc_doc.insert(ignore_permissions=True)
-            alloc_doc.submit()
-
-        doc = frappe.get_doc({
-            "doctype": "Leave Application",
-            "employee": employee.name,
-            "leave_type": leave_type,
-            "from_date": start,
-            "to_date": end,
-            "half_day": half_day,
-            "half_day_date": half_day_date if half_day else None,
-            "description": description or "",
-            "status": "Open",
-            "leave_approver": _get_leave_approver(employee.name),
-        })
-        doc.insert(ignore_permissions=True)
-
+    doc.insert(ignore_permissions=True)
     frappe.db.commit()
     notify_shift_panel_update(doc, None)
     return {"name": doc.name}
