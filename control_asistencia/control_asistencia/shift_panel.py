@@ -989,6 +989,9 @@ def get_mobile_profile():
         "log_type",
         order_by="time desc"
     ) or "OUT"
+
+    user_roles = frappe.get_roles(frappe.session.user)
+    show_desk_btn = any(role in user_roles for role in ["HR User", "HR Manager", "Administrator", "System Manager"])
         
     return {
         "employee_id": employee.name,
@@ -998,7 +1001,8 @@ def get_mobile_profile():
         "branch_lng": branch_data.get("custom_longitud"),
         "max_distance": max_distance_meters,
         "last_log_type": last_log_type,
-        "require_geolocation": require_geolocation
+        "require_geolocation": require_geolocation,
+        "show_desk_btn": show_desk_btn
     }
 
 @frappe.whitelist()

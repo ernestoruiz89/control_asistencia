@@ -94,6 +94,22 @@
         background: rgba(239, 68, 68, 0.4);
         color: #ffffff;
     }
+    .am-header-desk-btn {
+        flex: 0 0 auto;
+        border: none;
+        background: rgba(59, 130, 246, 0.2);
+        color: #93c5fd;
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .am-header-desk-btn:hover {
+        background: rgba(59, 130, 246, 0.4);
+        color: #ffffff;
+    }
     .am-branch-container {
         margin-top: 10px;
         background-color: rgba(255, 255, 255, 0.05);
@@ -591,6 +607,7 @@ frappe.ready(function() {
             '        <h1 class="am-title">Marcar Asistencia</h1>' +
             '        <div style="display:flex; gap:8px;">' +
             '            <button class="am-install-btn ' + (deferredInstallPrompt && !pwaInstalled ? 'am-install-visible' : '') + '" id="am-install-app" type="button">Instalar</button>' +
+            (profile.show_desk_btn ? '            <button class="am-header-desk-btn" id="am-header-desk" type="button">Ir a Desk</button>' : '') +
             '            <button class="am-header-logout-btn" id="am-header-logout" type="button">Salir</button>' +
             '        </div>' +
             '    </div>' +
@@ -680,6 +697,11 @@ frappe.ready(function() {
         $('#am-header-logout').on('click', function() {
             window.location.href = '/?cmd=web_logout';
         });
+        if (profile.show_desk_btn) {
+            $('#am-header-desk').on('click', function() {
+                window.location.href = '/app';
+            });
+        }
         $('#am-btn-refresh').on('click', checkLocation);
         $('#am-btn-in').on('click', function() { handleLog('IN'); });
         $('#am-btn-out').on('click', function() { handleLog('OUT'); });
