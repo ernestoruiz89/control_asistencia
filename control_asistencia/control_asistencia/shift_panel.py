@@ -830,6 +830,23 @@ def _split_first_name(raw_name):
 SHIFT_PANEL_USER_ROLES = ("Employee", "HR User", "HR Manager", "System Manager")
 
 
+def configure_supervisor_workspace_and_modules(user_doc, is_supervisor):
+    if is_supervisor:
+        user_doc.default_workspace = "Control de Asistencia"
+        
+        # Block all modules except "Control Asistencia"
+        all_modules = frappe.get_all("Module Def", fields=["name"])
+        user_doc.set("block_modules", [])
+        for m in all_modules:
+            if m.name != "Control Asistencia":
+                user_doc.append("block_modules", {"module": m.name})
+    else:
+        if user_doc.default_workspace == "Control de Asistencia":
+            user_doc.default_workspace = ""
+        user_doc.set("block_modules", [])
+
+
+
 @frappe.whitelist()
 def get_shift_panel_user_role(user):
     if not user:
@@ -864,6 +881,7 @@ def update_employee_user_access(user, user_role=None, new_password=None, enabled
         existing_roles = [{"role": row.role} for row in user_doc.get("roles", []) if row.role not in managed_roles]
         user_doc.set("roles", existing_roles)
         user_doc.append("roles", {"role": user_role})
+        configure_supervisor_workspace_and_modules(user_doc, user_role == "HR User")
 
     user_doc.save(ignore_permissions=True)
     frappe.db.commit()
@@ -958,9 +976,13 @@ def create_employee_with_user(
 
         # Now add the role — the Employee link exists so Frappe keeps it
         user_doc = frappe.get_doc("User", email)
-        has_role = any(r.role == user_role for r in user_doc.get("roles", []))
-        if not has_role:
-            user_doc.add_roles(user_role)
+        managed_roles = set(SHIFT_PANEL_USER_ROLES)
+        existing_roles = [{"role": row.role} for row in user_doc.get("roles", []) if row.role not in managed_roles]
+        user_doc.set("roles", existing_roles)
+        user_doc.append("roles", {"role": user_role})
+        
+        configure_supervisor_workspace_and_modules(user_doc, user_role == "HR User")
+        user_doc.save(ignore_permissions=True)
         frappe.db.commit()
 
     return {
