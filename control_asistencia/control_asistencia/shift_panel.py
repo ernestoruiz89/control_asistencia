@@ -831,7 +831,10 @@ SHIFT_PANEL_USER_ROLES = ("Employee", "HR User", "HR Manager", "System Manager")
 
 
 def configure_supervisor_workspace_and_modules(user_doc, is_supervisor):
-    if is_supervisor:
+    user_roles = [r.role for r in user_doc.get("roles", [])]
+    has_higher_roles = any(r in user_roles for r in ["HR Manager", "System Manager", "Administrator"])
+
+    if is_supervisor and not has_higher_roles:
         user_doc.default_workspace = "Control de Asistencia"
         user_doc.search_bar = 0
         
