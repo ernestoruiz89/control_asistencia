@@ -12,6 +12,10 @@ fixtures = [
         "dt": "Custom Field",
         "filters": [["module", "=", "Control Asistencia"]],
     },
+    {
+        "dt": "Notification",
+        "filters": [["name", "in", ["Nueva Solicitud de Permiso"]]],
+    },
 ]
 
 # Apps

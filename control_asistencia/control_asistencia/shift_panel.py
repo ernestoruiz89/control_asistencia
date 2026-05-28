@@ -957,12 +957,46 @@ def record_mobile_checkin(log_type, latitude=None, longitude=None, device_id=Non
     if frappe.session.user == "Guest":
         frappe.throw(_("Not logged in"), frappe.AuthenticationError)
         
-    emp_data = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, ["name", "attendance_device_id"], as_dict=True)
+    emp_data = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, ["name", "attendance_device_id", "branch"], as_dict=True)
     if not emp_data:
         frappe.throw(_("No employee linked to your account."))
         
     employee_id = emp_data["name"]
     
+    # ── Validación de Geolocalización (si es requerida) ──
+    settings = frappe.get_doc("Ajustes de Control Asistencia")
+    if bool(settings.require_geolocation):
+        if not emp_data.get("branch"):
+            frappe.throw(_("No se puede registrar asistencia: No tienes una sucursal asignada y la geolocalización es requerida."))
+        
+        branch_coords = frappe.db.get_value("Branch", emp_data["branch"], ["custom_latitud", "custom_longitud"], as_dict=True)
+        if not branch_coords or branch_coords.get("custom_latitud") is None or branch_coords.get("custom_longitud") is None:
+            frappe.throw(_("No se puede registrar asistencia: Tu sucursal no tiene coordenadas de geolocalización configuradas."))
+            
+        if latitude is None or longitude is None:
+            frappe.throw(_("Se requiere la ubicación GPS para registrar asistencia."))
+            
+        # Calcular distancia
+        import math
+        def get_distance_py(lat1, lon1, lat2, lon2):
+            R = 6371000  # metros
+            p1 = math.radians(lat1)
+            p2 = math.radians(lat2)
+            dp = math.radians(lat2 - lat1)
+            dl = math.radians(lon2 - lon1)
+            a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+            return R * c
+
+        try:
+            dist = get_distance_py(float(latitude), float(longitude), float(branch_coords["custom_latitud"]), float(branch_coords["custom_longitud"]))
+        except (ValueError, TypeError):
+            frappe.throw(_("Coordenadas de ubicación inválidas."))
+            
+        max_dist = float(settings.max_distance_meters) if settings.max_distance_meters is not None else 20
+        if dist > max_dist:
+            frappe.throw(_("Estás fuera del rango permitido de la sucursal. Distancia: {0} metros. Máximo permitido: {1} metros.").format(round(dist), max_dist))
+
     # ── Validación de Dispositivo (MAC/Device ID) ──
     if emp_data.get("attendance_device_id"):
         if emp_data.get("attendance_device_id") != device_id:

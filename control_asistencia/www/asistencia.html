@@ -545,15 +545,16 @@ frappe.ready(function() {
         }
 
         const allowed_dist = profile.max_distance || 20;
-        const canAction = !profile.require_geolocation || !profile.branch_lat || (locationDist !== null && locationDist <= allowed_dist);
+        const hasCoordinates = !!(profile.branch_lat && profile.branch_lng);
+        const canAction = !profile.require_geolocation || (hasCoordinates && locationDist !== null && locationDist <= allowed_dist);
         const status = profile.last_log_type === 'IN' ? 'checked-in' : 'checked-out';
 
         let locHtml = '';
         if (profile.require_geolocation) {
             if (locErrorMsg) {
                 locHtml = '<p class="am-error-text">' + locErrorMsg + '</p>';
-            } else if (!profile.branch_lat) {
-                locHtml = '<p class="am-info-text">Esta sucursal no tiene validación GPS activa.</p>';
+            } else if (!hasCoordinates) {
+                locHtml = '<p class="am-error-text">Tu sucursal no tiene coordenadas de geolocalización configuradas o no tienes sucursal asignada.</p>';
             } else if (isCheckingLoc) {
                 locHtml = '<p class="am-info-text">Obteniendo ubicación actual...</p>';
             } else if (locationDist !== null) {
@@ -569,7 +570,9 @@ frappe.ready(function() {
             } else {
                 locHtml = '<p class="am-info-text">Esperando ubicación...</p>';
             }
-            locHtml += '<button class="am-refresh-btn" id="am-btn-refresh">Actualizar Ubicación</button>';
+            if (hasCoordinates) {
+                locHtml += '<button class="am-refresh-btn" id="am-btn-refresh">Actualizar Ubicación</button>';
+            }
         }
 
         const inDisabled = !canAction || status === 'checked-in' || savingLog || isCheckingLoc;
