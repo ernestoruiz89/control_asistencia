@@ -969,6 +969,7 @@ def create_employee_with_user(
                 "username": username,
                 "send_welcome_email": 0,
                 "user_type": "System User",
+                "roles": [{"role": "Employee"}]
             })
             if password:
                 user_doc.new_password = password
