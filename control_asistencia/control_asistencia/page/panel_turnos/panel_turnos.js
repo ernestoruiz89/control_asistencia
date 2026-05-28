@@ -1109,6 +1109,7 @@ function showAddEmployeeDialog() {
         });
 
         dialog.show();
+        dialog.$wrapper.find('input[type="password"], input[data-fieldname="email"], input[data-fieldname="username"]').attr('autocomplete', 'new-password');
     });
 }
 
@@ -1261,6 +1262,7 @@ function showCreateUserForEmployeeDialog(emp, parentDialog) {
     });
 
     dialog.show();
+    dialog.$wrapper.find('input[type="password"], input[data-fieldname="email"], input[data-fieldname="username"]').attr('autocomplete', 'new-password');
 }
 
 function showEditEmployeeDialog(employeeName) {
@@ -1463,6 +1465,8 @@ function showEditEmployeeDialog(employeeName) {
                 });
 
                 dialog.show();
+                // Prevent browser autofill
+                dialog.$wrapper.find('input[type="password"], input[data-fieldname="username"]').attr('autocomplete', 'new-password');
                 if (emp.user_id) {
                     frappe.call({
                         method: `${API}.get_shift_panel_user_role`,
