@@ -833,6 +833,7 @@ SHIFT_PANEL_USER_ROLES = ("Employee", "HR User", "HR Manager", "System Manager")
 def configure_supervisor_workspace_and_modules(user_doc, is_supervisor):
     if is_supervisor:
         user_doc.default_workspace = "Control de Asistencia"
+        user_doc.search_bar = 0
         
         # Block all modules except "Control Asistencia"
         all_modules = frappe.get_all("Module Def", fields=["name"])
@@ -843,6 +844,7 @@ def configure_supervisor_workspace_and_modules(user_doc, is_supervisor):
     else:
         if user_doc.default_workspace == "Control de Asistencia":
             user_doc.default_workspace = ""
+        user_doc.search_bar = 1
         user_doc.set("block_modules", [])
 
 
