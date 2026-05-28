@@ -44,7 +44,7 @@
         "label": "Latitud",
         "insert_after": "branch",
         "translatable": 0,
-        "precision": "6"
+        "precision": "9"
     },
     {
         "name": "Branch-custom_longitud",
@@ -56,6 +56,6 @@
         "label": "Longitud",
         "insert_after": "custom_latitud",
         "translatable": 0,
-        "precision": "6"
+        "precision": "9"
     }
 ]

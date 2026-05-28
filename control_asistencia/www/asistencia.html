@@ -78,6 +78,22 @@
         align-items: center;
         justify-content: center;
     }
+    .am-header-logout-btn {
+        flex: 0 0 auto;
+        border: none;
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .am-header-logout-btn:hover {
+        background: rgba(239, 68, 68, 0.4);
+        color: #ffffff;
+    }
     .am-branch-container {
         margin-top: 10px;
         background-color: rgba(255, 255, 255, 0.05);
@@ -570,7 +586,10 @@ frappe.ready(function() {
             '<div class="am-header">' +
             '    <div class="am-title-row">' +
             '        <h1 class="am-title">Marcar Asistencia</h1>' +
-            '        <button class="am-install-btn ' + (deferredInstallPrompt && !pwaInstalled ? 'am-install-visible' : '') + '" id="am-install-app" type="button">Instalar</button>' +
+            '        <div style="display:flex; gap:8px;">' +
+            '            <button class="am-install-btn ' + (deferredInstallPrompt && !pwaInstalled ? 'am-install-visible' : '') + '" id="am-install-app" type="button">Instalar</button>' +
+            '            <button class="am-header-logout-btn" id="am-header-logout" type="button">Salir</button>' +
+            '        </div>' +
             '    </div>' +
             '    <p class="am-greeting">Hola, ' + employeeName + '</p>' +
             '    <div class="am-branch-container">' +
@@ -655,6 +674,9 @@ frappe.ready(function() {
         $('#am-tab-attendance').on('click', function() { activeTab = 'attendance'; render(); });
         $('#am-tab-leave').on('click', function() { activeTab = 'leave'; render(); loadLeaveData(); });
         $('#am-install-app').on('click', installPWA);
+        $('#am-header-logout').on('click', function() {
+            window.location.href = '/?cmd=web_logout';
+        });
         $('#am-btn-refresh').on('click', checkLocation);
         $('#am-btn-in').on('click', function() { handleLog('IN'); });
         $('#am-btn-out').on('click', function() { handleLog('OUT'); });
