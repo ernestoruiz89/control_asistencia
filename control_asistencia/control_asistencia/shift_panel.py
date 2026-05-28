@@ -652,14 +652,50 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
         "status": "Open",
         "leave_approver": _get_leave_approver(employee.name),
     })
+
     try:
         doc.insert(ignore_permissions=True)
-    except Exception as e:
-        error_msg = str(e)
-        if "Periodo de aplicacion no puede ser" in error_msg or "Application period cannot be outside Leave Allocation" in error_msg:
-            frappe.throw("No tienes días de vacaciones o licencia asignados para este periodo.")
+    except Exception:
+        frappe.clear_messages()
+        from frappe.utils import get_year_start, get_year_end
+
+        existing = frappe.db.sql("""
+            SELECT name FROM `tabLeave Allocation` 
+            WHERE employee = %s AND leave_type = %s 
+            AND to_date >= %s AND from_date <= %s AND docstatus = 1
+        """, (employee.name, leave_type, start, end), as_dict=True)
+        
+        if existing:
+            for ex in existing:
+                ex_doc = frappe.get_doc("Leave Allocation", ex.name)
+                ex_doc.db_set("new_leaves_allocated", ex_doc.new_leaves_allocated + 30)
+                ex_doc.save(ignore_permissions=True)
         else:
-            raise
+            alloc_doc = frappe.get_doc({
+                "doctype": "Leave Allocation",
+                "employee": employee.name,
+                "leave_type": leave_type,
+                "from_date": get_year_start(start),
+                "to_date": get_year_end(end),
+                "new_leaves_allocated": 30,
+                "description": "Auto-asignado por sistema móvil"
+            })
+            alloc_doc.insert(ignore_permissions=True)
+            alloc_doc.submit()
+
+        doc = frappe.get_doc({
+            "doctype": "Leave Application",
+            "employee": employee.name,
+            "leave_type": leave_type,
+            "from_date": start,
+            "to_date": end,
+            "half_day": half_day,
+            "half_day_date": half_day_date if half_day else None,
+            "description": description or "",
+            "status": "Open",
+            "leave_approver": _get_leave_approver(employee.name),
+        })
+        doc.insert(ignore_permissions=True)
 
     frappe.db.commit()
     notify_shift_panel_update(doc, None)
