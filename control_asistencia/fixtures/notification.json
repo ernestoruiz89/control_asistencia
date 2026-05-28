@@ -5,7 +5,7 @@
   "document_type": "Leave Application",
   "enabled": 1,
   "event": "New",
-  "is_standard": 1,
+  "is_standard": 0,
   "message": "<p>Hola,</p>\n<p>El empleado <strong>{{ doc.employee_name }}</strong> ha solicitado un permiso ({{ doc.leave_type }}) desde el <strong>{{ doc.from_date }}</strong> hasta el <strong>{{ doc.to_date }}</strong>.</p>\n<p>Detalles / Comentario: {{ doc.description or 'Sin comentarios' }}</p>\n<p>Por favor, revisa la solicitud en el sistema.</p>",
   "name": "Nueva Solicitud de Permiso",
   "recipients": [
