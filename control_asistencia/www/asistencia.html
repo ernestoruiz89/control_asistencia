@@ -597,7 +597,7 @@ frappe.ready(function() {
         const employeeName = esc(profile.employee_name || 'Empleado');
         const branchName = esc(profile.branch || 'Sin sucursal');
         const statusDot = status === 'checked-in' ? 'am-dot-green' : 'am-dot-gray';
-        const statusLabel = status === 'checked-in' ? 'Turno Activo (Check-IN)' : 'Sin turno activo';
+        const statusLabel = status === 'checked-in' ? 'Turno Activo (Check-IN)' : 'Esperando Check-IN';
         const inStr = (savingLog && profile._attemptAction === 'IN') ? 'Guardando...' : 'Check IN';
         const outStr = (savingLog && profile._attemptAction === 'OUT') ? 'Guardando...' : 'Check OUT';
 
@@ -615,6 +615,10 @@ frappe.ready(function() {
             '    <div class="am-branch-container">' +
             '        <p class="am-branch-label">Sucursal Asignada</p>' +
             '        <p class="am-branch-text">' + branchName + '</p>' +
+            '        <div style="margin-top: 12px;">' +
+            '            <p class="am-branch-label">Turno de Hoy</p>' +
+            '            <p class="am-branch-text">' + (profile.current_shift || 'Sin turno asignado hoy') + '</p>' +
+            '        </div>' +
             '    </div>' +
             '</div>' +
             '<div class="am-tabs">' +

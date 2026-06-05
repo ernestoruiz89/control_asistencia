@@ -1050,6 +1050,18 @@ def get_mobile_profile():
     user_roles = frappe.get_roles(frappe.session.user)
     show_desk_btn = any(role in user_roles for role in ["HR User", "HR Manager", "Administrator", "System Manager"])
         
+    # Get current shift
+    current_shift = ""
+    today = frappe.utils.today()
+    shift_assignment = frappe.db.get_value(
+        "Shift Assignment",
+        {"employee": employee.name, "start_date": ["<=", today], "docstatus": 1, "status": "Active"},
+        "shift_type",
+        order_by="start_date desc"
+    )
+    if shift_assignment:
+        current_shift = shift_assignment
+
     return {
         "employee_id": employee.name,
         "employee_name": employee.employee_name,
@@ -1059,7 +1071,8 @@ def get_mobile_profile():
         "max_distance": max_distance_meters,
         "last_log_type": last_log_type,
         "require_geolocation": require_geolocation,
-        "show_desk_btn": show_desk_btn
+        "show_desk_btn": show_desk_btn,
+        "current_shift": current_shift
     }
 
 @frappe.whitelist()
