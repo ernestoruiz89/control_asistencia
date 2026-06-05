@@ -651,7 +651,6 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
         fields=["name", "from_date", "to_date", "new_leaves_allocated"],
         order_by="from_date asc"
     )
-
     if allocations:
         # Buscar si alguna cubre completamente el rango start/end
         covering_alloc = None
@@ -659,7 +658,7 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
             if getdate(alloc.from_date) <= start and getdate(alloc.to_date) >= end:
                 covering_alloc = alloc
                 break
-        
+
         if covering_alloc:
             # Asegurar saldo de días
             new_leaves = float(covering_alloc.new_leaves_allocated or 0) + 30
@@ -667,6 +666,10 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
                 "new_leaves_allocated": new_leaves,
                 "total_leaves_allocated": new_leaves
             })
+            # Actualizar Leave Ledger Entry
+            ledgers = frappe.db.get_all("Leave Ledger Entry", filters={"transaction_type": "Leave Allocation", "transaction_name": covering_alloc.name})
+            for l in ledgers:
+                frappe.db.set_value("Leave Ledger Entry", l.name, "leaves", new_leaves)
         else:
             # Expandir la fecha de la asignación existente para que cubra la solicitud
             target_alloc = allocations[0]
@@ -683,6 +686,15 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
                 "new_leaves_allocated": new_leaves,
                 "total_leaves_allocated": new_leaves
             })
+            
+            # Actualizar Leave Ledger Entry para expandir fechas y días
+            ledgers = frappe.db.get_all("Leave Ledger Entry", filters={"transaction_type": "Leave Allocation", "transaction_name": target_alloc.name})
+            for l in ledgers:
+                frappe.db.set_value("Leave Ledger Entry", l.name, {
+                    "from_date": new_from,
+                    "to_date": new_to,
+                    "leaves": new_leaves
+                })
     else:
         # No existe ninguna asignación, creamos una nueva que cubra el año completo
         year_start = f"{start.year}-01-01"
