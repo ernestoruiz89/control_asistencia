@@ -1014,7 +1014,7 @@ def create_employee_with_user(
 @frappe.whitelist()
 def get_mobile_profile():
     if frappe.session.user == "Guest":
-        frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+        return {"redirect_to_login": True}
         
     employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, ["name", "employee_name", "branch"], as_dict=True)
     if not employee:

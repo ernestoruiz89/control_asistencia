@@ -916,6 +916,10 @@ frappe.ready(function() {
     frappe.call({
         method: 'control_asistencia.control_asistencia.shift_panel.get_mobile_profile',
         callback: function(r) {
+            if (r.message && r.message.redirect_to_login) {
+                window.location.href = '/login?redirect-to=/asistencia';
+                return;
+            }
             if (r.message) {
                 profile = r.message;
                 render();
