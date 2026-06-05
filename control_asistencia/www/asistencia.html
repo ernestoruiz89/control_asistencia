@@ -938,6 +938,41 @@ frappe.ready(function() {
             }
         }
     });
+
+    // Refrescar perfil cuando el usuario regresa a la app (muy útil en móviles)
+    document.addEventListener("visibilitychange", function() {
+        if (!document.hidden && profile && !profile.not_employee) {
+            frappe.call({
+                method: 'control_asistencia.control_asistencia.shift_panel.get_mobile_profile',
+                callback: function(r) {
+                    if (r.message && r.message.redirect_to_login) {
+                        window.location.href = '/login?redirect-to=/asistencia';
+                        return;
+                    }
+                    if (r.message) {
+                        profile = r.message;
+                        render();
+                        if (profile.require_geolocation) {
+                            checkLocation();
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    // Escuchar eventos en tiempo real si el socket está conectado
+    if (window.frappe && frappe.realtime) {
+        frappe.realtime.on('update_max_distance', function(distance) {
+            if (profile) {
+                profile.max_distance = parseFloat(distance);
+                render();
+                if (profile.require_geolocation) {
+                    checkLocation();
+                }
+            }
+        });
+    }
 });
 </script>
 {% endblock %}
