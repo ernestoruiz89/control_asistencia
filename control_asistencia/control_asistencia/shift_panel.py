@@ -543,6 +543,7 @@ def _ensure_leave_allocation(employee, leave_type, from_date, to_date):
             "docstatus": 1,
         },
         limit=1,
+        ignore_permissions=True
     )
     if existing:
         return
@@ -579,6 +580,7 @@ def get_leave_type_options():
         fields=["name"],
         order_by="name asc",
         limit=200,
+        ignore_permissions=True
     )
 
 
@@ -603,6 +605,7 @@ def get_my_leave_applications(limit=20):
         ],
         order_by="creation desc",
         limit=int(limit or 20),
+        ignore_permissions=True
     )
     for row in rows:
         row["can_cancel"] = row.status == "Open"
@@ -636,6 +639,7 @@ def request_mobile_leave(leave_type, from_date, to_date, half_day=0, half_day_da
         },
         fields=["name", "status"],
         limit=1,
+        ignore_permissions=True
     )
     if overlapping:
         frappe.throw(_("Ya existe una solicitud de vacaciones en ese rango."))
@@ -779,6 +783,7 @@ def get_pending_leave_approvals():
         ],
         order_by="creation asc",
         limit=200,
+        ignore_permissions=True
     )
     return rows
 
@@ -1031,13 +1036,13 @@ def get_mobile_profile():
         ) or {}
         
     # Get Settings max_distance and geolocation toggle
-    settings = frappe.get_doc("Ajustes de Control Asistencia")
+    max_distance_meters = frappe.db.get_single_value("Ajustes de Control Asistencia", "max_distance_meters")
     try:
-        max_distance_meters = float(settings.max_distance_meters) if settings.max_distance_meters is not None else 20
-    except ValueError:
+        max_distance_meters = float(max_distance_meters) if max_distance_meters is not None else 20
+    except (ValueError, TypeError):
         max_distance_meters = 20
         
-    require_geolocation = bool(settings.require_geolocation)
+    require_geolocation = bool(frappe.db.get_single_value("Ajustes de Control Asistencia", "require_geolocation"))
 
     # Get last checkin status to determine if we should show IN or OUT
     last_log_type = frappe.db.get_value(
@@ -1087,8 +1092,8 @@ def record_mobile_checkin(log_type, latitude=None, longitude=None, device_id=Non
     employee_id = emp_data["name"]
     
     # ── Validación de Geolocalización (si es requerida) ──
-    settings = frappe.get_doc("Ajustes de Control Asistencia")
-    if bool(settings.require_geolocation):
+    require_geolocation = bool(frappe.db.get_single_value("Ajustes de Control Asistencia", "require_geolocation"))
+    if require_geolocation:
         if not emp_data.get("branch"):
             frappe.throw(_("No se puede registrar asistencia: No tienes una sucursal asignada y la geolocalización es requerida."))
         
@@ -1116,7 +1121,12 @@ def record_mobile_checkin(log_type, latitude=None, longitude=None, device_id=Non
         except (ValueError, TypeError):
             frappe.throw(_("Coordenadas de ubicación inválidas."))
             
-        max_dist = float(settings.max_distance_meters) if settings.max_distance_meters is not None else 20
+        max_distance_meters = frappe.db.get_single_value("Ajustes de Control Asistencia", "max_distance_meters")
+        try:
+            max_dist = float(max_distance_meters) if max_distance_meters is not None else 20
+        except (ValueError, TypeError):
+            max_dist = 20
+            
         if dist > max_dist:
             frappe.throw(_("Estás fuera del rango permitido de la sucursal. Distancia: {0} metros. Máximo permitido: {1} metros.").format(round(dist), max_dist))
 
