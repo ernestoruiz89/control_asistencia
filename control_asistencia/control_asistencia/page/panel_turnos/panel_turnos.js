@@ -82,6 +82,11 @@ frappe.pages['panel-turnos'].on_page_load = function (wrapper) {
         </div>
     `);
 
+    const canCreateUser = frappe.user.has_role('Administrator') || frappe.user.has_role('System Manager') || frappe.user.has_role('HR Manager');
+    if (!canCreateUser) {
+        document.getElementById('btn-add-employee').style.display = 'none';
+    }
+
     renderLegend();
     bindEvents();
     loadData();

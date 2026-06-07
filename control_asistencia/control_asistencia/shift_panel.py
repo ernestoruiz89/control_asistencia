@@ -937,6 +937,13 @@ def create_employee_with_user(
 
     Returns ``{"employee": name, "user": email_or_None, "user_created": bool}``.
     """
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+    user_roles = frappe.get_roles(frappe.session.user)
+    if not any(r in user_roles for r in ["HR Manager", "System Manager", "Administrator"]):
+        frappe.throw(_("No tienes permisos suficientes para crear usuarios."))
+
     # ── 0. Parse composite first name ───────────────────────────────────────
     actual_first, actual_middle = _split_first_name(first_name)
 
