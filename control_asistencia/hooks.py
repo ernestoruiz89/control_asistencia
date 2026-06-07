@@ -16,6 +16,13 @@ fixtures = [
         "dt": "Notification",
         "filters": [["name", "in", ["Nueva Solicitud de Permiso"]]],
     },
+    {
+        "dt": "Custom DocPerm",
+        "filters": [
+            ["role", "in", ["HR Manager", "System Manager", "Administrator"]],
+            ["parent", "in", ["User", "Employee"]]
+        ]
+    },
 ]
 
 # Apps
