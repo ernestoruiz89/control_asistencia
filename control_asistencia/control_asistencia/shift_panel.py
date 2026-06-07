@@ -76,9 +76,9 @@ def _get_leave_approver(employee):
 
 
 def _is_privileged_approver():
-    """Return True if the current user is a System Manager or HR Manager."""
+    """Return True if the current user is a System Manager or HR Manager or HR User."""
     roles = frappe.get_roles(frappe.session.user)
-    return "System Manager" in roles or "HR Manager" in roles
+    return "System Manager" in roles or "HR Manager" in roles or "HR User" in roles
 
 
 @frappe.whitelist()
