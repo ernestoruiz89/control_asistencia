@@ -371,7 +371,7 @@ def get_employee_and_enroll(identificacion, mac_address):
         frappe.throw("No se encontró ningún empleado con la identificación: " + str(identificacion))
 
     # 2. Obtener el nombre y la MAC actual registrada
-    emp_data = frappe.db.get_value("Employee", employee_id, ["employee_name", "attendance_device_id"], as_dict=True)
+    emp_data = frappe.db.get_value("Employee", employee_id, ["employee_name", "attendance_device_id", "custom_omitir_verificacion_dispositivo"], as_dict=True)
 
     # 3. Si NO tiene MAC registrada, la guardamos
     if not emp_data.attendance_device_id:
@@ -387,9 +387,13 @@ def get_employee_and_enroll(identificacion, mac_address):
             "employee_name": emp_data.employee_name
         }
 
-    # 4. Si ya tiene una MAC, validamos que sea la misma
-    if emp_data.attendance_device_id != mac_address:
-        frappe.throw("Seguridad: Este dispositivo no está autorizado para este usuario.")
+    # 4. Verificación de MAC vinculada
+    global_omitir_verificacion = frappe.db.get_single_value("Ajustes de Control Asistencia", "omitir_verificacion_dispositivo_global")
+    empleado_omitir_verificacion = emp_data.get("custom_omitir_verificacion_dispositivo")
+
+    if not global_omitir_verificacion and not empleado_omitir_verificacion:
+        if emp_data.attendance_device_id != mac_address:
+            frappe.throw("Seguridad: Este dispositivo no está autorizado para este usuario.")
 
     return {
         "status": "validated",

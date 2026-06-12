@@ -1287,7 +1287,7 @@ function showEditEmployeeDialog(employeeName) {
                 { label: __('Administrador Sistema'), value: 'System Manager' },
             ];
 
-            const renderDialog = (existingUsername) => {
+            const renderDialog = (existingUsername, role) => {
                 const dialog = new frappe.ui.Dialog({
                     title: __('Editar Empleado: ') + emp.employee_name,
                     size: 'large',
@@ -1320,13 +1320,14 @@ function showEditEmployeeDialog(employeeName) {
                         { fieldtype: 'Section Break', label: __('Dispositivo') },
                         { fieldname: 'attendance_device_id', fieldtype: 'Data', label: __('Dispositivo Vinculado (MAC)'), read_only: 1, default: emp.attendance_device_id || '' },
                         { fieldtype: 'HTML', fieldname: 'btn_unlink' },
+                        { fieldname: 'custom_omitir_verificacion_dispositivo', fieldtype: 'Check', label: __('Omitir verificación de dispositivo'), default: emp.custom_omitir_verificacion_dispositivo || 0, description: __('Si se marca, el empleado podrá registrar asistencia desde cualquier dispositivo.') },
                         { fieldtype: 'Section Break', label: __('Acceso') },
                         {
                             fieldname: 'user_role',
                             fieldtype: 'Select',
                             label: __('Rol en el Sistema'),
                             options: roleOptions,
-                            default: emp.user_id ? '' : 'Employee',
+                            default: emp.user_id ? role : 'Employee',
                             read_only: emp.user_id ? 0 : 1,
                             description: emp.user_id
                                 ? __('Rol principal administrado desde este panel.')
@@ -1472,25 +1473,20 @@ function showEditEmployeeDialog(employeeName) {
                 dialog.show();
                 // Prevent browser autofill
                 dialog.$wrapper.find('input[type="password"], input[data-fieldname="username"]').attr('autocomplete', 'new-password');
-                if (emp.user_id) {
-                    frappe.call({
-                        method: `${API}.get_shift_panel_user_role`,
-                        args: { user: emp.user_id },
-                        callback: ({ message }) => {
-                            if (message && dialog.fields_dict.user_role) {
-                                dialog.set_value('user_role', message);
-                            }
-                        },
-                    });
-                }
             }; // End renderDialog function
 
             if (emp.user_id) {
-                frappe.db.get_value('User', emp.user_id, 'username', (r) => {
-                    renderDialog(r.message ? r.message.username : '');
+                frappe.call({
+                    method: `${API}.get_shift_panel_user_details`,
+                    args: { user: emp.user_id },
+                    callback: ({ message }) => {
+                        const existingUsername = (message && message.username) ? message.username : '';
+                        const role = (message && message.role) ? message.role : 'Employee';
+                        renderDialog(existingUsername, role);
+                    }
                 });
             } else {
-                renderDialog('');
+                renderDialog('', 'Employee');
             }
         }
     });

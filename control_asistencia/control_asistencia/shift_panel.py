@@ -201,6 +201,9 @@ def get_weekly_panel_data(start_date, days=7):
     end_date = start_date + timedelta(days=days-1)
     today = getdate(nowdate())
 
+    roles = frappe.get_roles(frappe.session.user)
+    ignore_perms = any(r in roles for r in ["Administrator", "System Manager", "HR Manager", "HR User"])
+
     # ── 1. Employees with shift assignments in this range ──
     assignments = frappe.get_all(
         "Shift Assignment",
@@ -211,6 +214,7 @@ def get_weekly_panel_data(start_date, days=7):
         },
         fields=["employee", "employee_name", "shift_type", "start_date", "end_date"],
         order_by="employee_name ASC",
+        ignore_permissions=ignore_perms,
     )
 
     employee_fields = ["name", "employee_name", "custom_identificacion", "branch", "status"]
@@ -224,6 +228,7 @@ def get_weekly_panel_data(start_date, days=7):
         filters={"status": ["in", ["Active", "Suspended", "Left"]]},
         fields=employee_fields,
         order_by="employee_name ASC",
+        ignore_permissions=ignore_perms,
     )
 
     # Build employee map
@@ -261,6 +266,7 @@ def get_weekly_panel_data(start_date, days=7):
         },
         fields=["employee", "time", "log_type"],
         order_by="time ASC",
+        ignore_permissions=ignore_perms,
     )
 
     # Group checkins by employee and date
@@ -283,7 +289,8 @@ def get_weekly_panel_data(start_date, days=7):
             "status": "Approved",
             "docstatus": 1,
         },
-        fields=["employee", "from_date", "to_date", "leave_type", "half_day", "half_day_date"]
+        fields=["employee", "from_date", "to_date", "leave_type", "half_day", "half_day_date"],
+        ignore_permissions=ignore_perms,
     )
 
     leave_map = {}  # emp -> date_str -> dict
@@ -439,6 +446,9 @@ def get_weekly_panel_data(start_date, days=7):
 @frappe.whitelist()
 def get_day_details(employee, date):
     """Return shift assignment, leave, and checkin details for a specific employee+date."""
+    roles = frappe.get_roles(frappe.session.user)
+    ignore_perms = any(r in roles for r in ["Administrator", "System Manager", "HR Manager", "HR User"])
+
     shifts = frappe.get_all(
         "Shift Assignment",
         filters={
@@ -448,6 +458,7 @@ def get_day_details(employee, date):
             "docstatus": 1,
         },
         fields=["name", "shift_type", "start_date", "end_date"],
+        ignore_permissions=ignore_perms,
     )
     leaves = frappe.get_all(
         "Leave Application",
@@ -459,6 +470,7 @@ def get_day_details(employee, date):
         },
         fields=["name", "leave_type", "from_date", "to_date",
                 "half_day", "half_day_date", "description", "status"],
+        ignore_permissions=ignore_perms,
     )
     checkins = frappe.get_all(
         "Employee Checkin",
@@ -468,6 +480,7 @@ def get_day_details(employee, date):
         },
         fields=["name", "time", "custom_registration_type", "log_type"],
         order_by="time ASC",
+        ignore_permissions=ignore_perms,
     )
     # Format times as strings for JSON serialization
     for c in checkins:
@@ -882,6 +895,17 @@ def get_shift_panel_user_role(user):
 
 
 @frappe.whitelist()
+def get_shift_panel_user_details(user):
+    if not user:
+        return {"role": "Employee", "username": ""}
+
+    role = get_shift_panel_user_role(user)
+    # By using ignore_permissions or getting it from DB directly, we avoid PermissionError
+    username = frappe.db.get_value("User", user, "username") or ""
+
+    return {"role": role, "username": username}
+
+@frappe.whitelist()
 def update_employee_user_access(user, user_role=None, new_password=None, enabled=1, username=None):
     if not user:
         frappe.throw(_("Usuario no especificado."))
@@ -971,6 +995,7 @@ def create_employee_with_user(
         "status": "Active",
         "company": frappe.defaults.get_defaults().get("company"),
         "gender": gender or "Male",
+        "create_user_permission": 0,
     })
     if email:
         emp_doc.prefered_email = email
@@ -1092,7 +1117,7 @@ def record_mobile_checkin(log_type, latitude=None, longitude=None, device_id=Non
     if frappe.session.user == "Guest":
         frappe.throw(_("Not logged in"), frappe.AuthenticationError)
         
-    emp_data = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, ["name", "attendance_device_id", "branch"], as_dict=True)
+    emp_data = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, ["name", "attendance_device_id", "branch", "custom_omitir_verificacion_dispositivo"], as_dict=True)
     if not emp_data:
         frappe.throw(_("No employee linked to your account."))
         
@@ -1138,14 +1163,18 @@ def record_mobile_checkin(log_type, latitude=None, longitude=None, device_id=Non
             frappe.throw(_("Estás fuera del rango permitido de la sucursal. Distancia: {0} metros. Máximo permitido: {1} metros.").format(round(dist), max_dist))
 
     # ── Validación de Dispositivo (MAC/Device ID) ──
-    if emp_data.get("attendance_device_id"):
-        if emp_data.get("attendance_device_id") != device_id:
-            frappe.throw("Seguridad: Este dispositivo no está autorizado para este usuario. Tu dispositivo enlazado es diferente.")
-    else:
-        # Auto-enroll si no tiene dispositivo 
-        if device_id and device_id != 'unknown':
-            frappe.db.set_value("Employee", employee_id, "attendance_device_id", device_id)
-            frappe.db.commit()
+    global_omitir_verificacion = frappe.db.get_single_value("Ajustes de Control Asistencia", "omitir_verificacion_dispositivo_global")
+    empleado_omitir_verificacion = emp_data.get("custom_omitir_verificacion_dispositivo")
+
+    if not global_omitir_verificacion and not empleado_omitir_verificacion:
+        if emp_data.get("attendance_device_id"):
+            if emp_data.get("attendance_device_id") != device_id:
+                frappe.throw("Seguridad: Este dispositivo no está autorizado para este usuario. Tu dispositivo enlazado es diferente.")
+        else:
+            # Auto-enroll si no tiene dispositivo 
+            if device_id and device_id != 'unknown':
+                frappe.db.set_value("Employee", employee_id, "attendance_device_id", device_id)
+                frappe.db.commit()
             
     doc = frappe.get_doc({
         "doctype": "Employee Checkin",

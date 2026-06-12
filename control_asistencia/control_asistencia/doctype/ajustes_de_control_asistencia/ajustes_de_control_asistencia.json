@@ -6,7 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "require_geolocation",
-  "max_distance_meters"
+  "max_distance_meters",
+  "omitir_verificacion_dispositivo_global"
  ],
  "fields": [
   {
@@ -22,6 +23,14 @@
    "fieldname": "max_distance_meters",
    "fieldtype": "Int",
    "label": "Distancia Máxima (Metros)"
+  },
+  {
+   "default": "0",
+   "description": "Si se marca, permitirá que los empleados marquen asistencia desde cualquier dispositivo, ignorando la verificación de dispositivo vinculado.",
+   "fieldname": "omitir_verificacion_dispositivo_global",
+   "fieldtype": "Check",
+   "label": "Omitir Verificación de Dispositivo Global",
+   "translatable": 0
   }
  ],
  "index_web_pages_for_search": 0,
