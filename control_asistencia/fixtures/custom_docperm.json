@@ -1,5 +1,6 @@
 [
  {
+  "name": "User-HR Manager",
   "amend": 0,
   "cancel": 0,
   "create": 1,
@@ -22,6 +23,7 @@
   "write": 1
  },
  {
+  "name": "Employee-HR Manager",
   "amend": 0,
   "cancel": 0,
   "create": 1,
@@ -44,6 +46,7 @@
   "write": 1
  },
  {
+  "name": "User-System Manager",
   "amend": 0,
   "cancel": 0,
   "create": 1,
@@ -66,6 +69,7 @@
   "write": 1
  },
  {
+  "name": "Employee-System Manager",
   "amend": 0,
   "cancel": 0,
   "create": 1,
@@ -88,6 +92,7 @@
   "write": 1
  },
  {
+  "name": "User-Administrator",
   "amend": 0,
   "cancel": 0,
   "create": 1,
@@ -110,6 +115,7 @@
   "write": 1
  },
  {
+  "name": "Employee-Administrator",
   "amend": 0,
   "cancel": 0,
   "create": 1,
