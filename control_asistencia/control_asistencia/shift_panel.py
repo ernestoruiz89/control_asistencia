@@ -824,7 +824,9 @@ def request_mobile_shift_change(shift_type, from_date, to_date, custom_details=N
         "shift_type": shift_type,
         "from_date": start,
         "to_date": end,
-        "approver": _get_leave_approver(employee.name)
+        "approver": _get_leave_approver(employee.name),
+        "status": "Pending",
+        "docstatus": 0
     })
 
     doc.insert(ignore_permissions=True)

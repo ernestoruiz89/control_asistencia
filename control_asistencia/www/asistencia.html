@@ -722,7 +722,7 @@ frappe.ready(function() {
                 '    <div class="am-form-card">' +
                 '        <h2 class="am-card-title">Solicitar Cambio de Turno</h2>' +
                 '        <div class="am-field"><label>Turno</label><select id="am-shift-type"><option value="">-- Seleccionar --</option>' + shiftOptions + '<option value="Otro">Otro (No existe)</option></select></div>' +
-                '        <div class="am-field" id="am-shift-custom-row" style="display:none;"><label>Detalles del Turno Solicitado (Horarios y Días aplicables)</label><textarea id="am-shift-custom" placeholder="Ej: Lunes a Jueves de 8am a 4pm..."></textarea></div>' +
+                '        <div class="am-field" id="am-shift-custom-row"><label>Detalles / Comentario adicional (Opcional)</label><textarea id="am-shift-custom" placeholder="Ej: Lunes a Jueves de 8am a 4pm..."></textarea></div>' +
                 '        <div class="am-field"><label>Desde</label><input type="date" id="am-shift-from-date"></div>' +
                 '        <div class="am-field"><label>Hasta</label><input type="date" id="am-shift-to-date"></div>' +
                 '        <button class="am-submit-btn ' + (savingLeave ? 'am-btn-disabled' : '') + '" id="am-submit-shift" ' + (savingLeave ? 'disabled' : '') + '>' + (savingLeave ? 'Enviando...' : 'Enviar solicitud') + '</button>' +
@@ -755,10 +755,12 @@ frappe.ready(function() {
         $('#am-submit-shift').on('click', submitShiftRequest);
         
         $('#am-shift-type').on('change', function() {
+            // Label is updated below to reflect optional/required state dynamically
+            const label = $('#am-shift-custom-row label');
             if ($(this).val() === 'Otro') {
-                $('#am-shift-custom-row').show();
+                label.text('Detalles del Turno Solicitado (Obligatorio)*');
             } else {
-                $('#am-shift-custom-row').hide();
+                label.text('Detalles / Comentario adicional (Opcional)');
             }
         });
 
