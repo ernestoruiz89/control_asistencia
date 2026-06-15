@@ -818,18 +818,25 @@ def request_mobile_shift_change(shift_type, from_date, to_date, custom_details=N
                 pass
         shift_type = generic_name
 
+    approver = _get_leave_approver(employee.name)
+    
     doc = frappe.get_doc({
         "doctype": "Shift Request",
         "employee": employee.name,
         "shift_type": shift_type,
         "from_date": start,
         "to_date": end,
-        "approver": _get_leave_approver(employee.name),
-        "status": "Pending",
+        "approver": approver,
+        "status": "Draft",
         "docstatus": 0
     })
 
-    doc.insert(ignore_permissions=True)
+    current_user = frappe.session.user
+    frappe.set_user(approver)
+    try:
+        doc.insert(ignore_permissions=True)
+    finally:
+        frappe.set_user(current_user)
     
     if custom_details:
         try:
