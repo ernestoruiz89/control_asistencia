@@ -831,12 +831,11 @@ def request_mobile_shift_change(shift_type, from_date, to_date, custom_details=N
         "docstatus": 0
     })
 
-    current_user = frappe.session.user
-    frappe.set_user(approver)
-    try:
-        doc.insert(ignore_permissions=True)
-    finally:
-        frappe.set_user(current_user)
+    # Bypass the catch-22 validation where 'approver' is mandatory but 
+    # Frappe prevents anyone but the approver from saving the document with the field set.
+    doc.validate_approver = lambda: None
+    
+    doc.insert(ignore_permissions=True)
     
     if custom_details:
         try:
