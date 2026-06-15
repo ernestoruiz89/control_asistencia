@@ -437,15 +437,18 @@ function showLeaveApprovalsDialog() {
                     <div style="font-weight:600;">${escapeHtml(lv.employee_name || lv.employee)}</div>
                     <div class="text-muted" style="font-size:12px;">${escapeHtml(lv.employee)}</div>
                 </td>
-                <td>${escapeHtml(lv.leave_type)}</td>
+                <td>
+                    <span class="badge ${lv.type === 'Shift' ? 'badge-info' : 'badge-primary'}">${escapeHtml(lv.type === 'Shift' ? 'Cambio Turno' : 'Vacaciones')}</span><br>
+                    ${escapeHtml(lv.leave_type)}
+                    ${lv.description ? `<br><small class="text-muted">${escapeHtml(lv.description)}</small>` : ''}
+                </td>
                 <td>${escapeHtml(lv.from_date)}<br><span class="text-muted">${__('a')} ${escapeHtml(lv.to_date)}</span></td>
-                <td>${lv.half_day ? __('Medio dia') : __('Dia completo')}</td>
-                <td><span class="text-muted" style="font-size:12px;">${escapeHtml(lv.leave_approver)}</span></td>
+                <td>${lv.type === 'Shift' ? '-' : (lv.half_day ? __('Medio dia') : __('Dia completo'))}</td>
                 <td style="white-space:nowrap;">
-                    <button class="btn btn-success btn-xs btn-approve-leave" data-name="${escapeHtml(lv.name)}">
+                    <button class="btn btn-success btn-xs btn-approve-leave" data-name="${escapeHtml(lv.name)}" data-type="${escapeHtml(lv.type || 'Leave')}">
                         <i class="fa fa-check"></i> ${__('Aprobar')}
                     </button>
-                    <button class="btn btn-danger btn-xs btn-reject-leave" data-name="${escapeHtml(lv.name)}" style="margin-left:6px;">
+                    <button class="btn btn-danger btn-xs btn-reject-leave" data-name="${escapeHtml(lv.name)}" data-type="${escapeHtml(lv.type || 'Leave')}" style="margin-left:6px;">
                         <i class="fa fa-times"></i> ${__('Rechazar')}
                     </button>
                 </td>
@@ -461,7 +464,6 @@ function showLeaveApprovalsDialog() {
                             <th>${__('Tipo')}</th>
                             <th>${__('Fechas')}</th>
                             <th>${__('Jornada')}</th>
-                            <th>${__('Aprobador')}</th>
                             <th>${__('Accion')}</th>
                         </tr>
                     </thead>
@@ -481,12 +483,20 @@ function showLeaveApprovalsDialog() {
         primary_action: () => d.hide(),
     });
 
-    const process = (leaveName, action) => {
+    const process = (reqName, reqType, action) => {
         const label = action === 'approve' ? __('aprobar') : __('rechazar');
+        const apiMethod = reqType === 'Shift' ? 'decide_shift_request' : 'decide_leave_application';
+        const args = action === 'approve' ? { action } : { action };
+        if (reqType === 'Shift') {
+            args.shift_name = reqName;
+        } else {
+            args.leave_name = reqName;
+        }
+        
         frappe.confirm(__('Deseas {0} esta solicitud?', [label]), () => {
             frappe.call({
-                method: `${API}.decide_leave_application`,
-                args: { leave_name: leaveName, action },
+                method: `${API}.${apiMethod}`,
+                args: args,
                 freeze: true,
                 freeze_message: __('Procesando...'),
                 callback: () => {

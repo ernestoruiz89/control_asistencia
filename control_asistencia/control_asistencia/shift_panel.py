@@ -78,7 +78,7 @@ def _get_leave_approver(employee):
 def _is_privileged_approver():
     """Return True if the current user is Administrator, System Manager, HR Manager or HR User."""
     roles = frappe.get_roles(frappe.session.user)
-    return "Administrator" in roles or "System Manager" in roles or "HR Manager" in roles or "HR User" in roles
+    return "Administrator" in roles or "System Manager" in roles or "HR Manager" in roles or "HR User" in roles or "Supervisor" in roles
 
 
 @frappe.whitelist()
@@ -861,7 +861,7 @@ def get_pending_leave_approvals():
     if not _is_privileged_approver():
         filters["leave_approver"] = frappe.session.user
 
-    rows = frappe.get_all(
+    leaves = frappe.get_all(
         "Leave Application",
         filters=filters,
         fields=[
@@ -881,7 +881,53 @@ def get_pending_leave_approvals():
         limit=200,
         ignore_permissions=True
     )
-    return rows
+
+    shift_filters = {
+        "status": "Draft",
+        "docstatus": 0,
+    }
+    if not _is_privileged_approver():
+        shift_filters["approver"] = frappe.session.user
+
+    shifts = frappe.get_all(
+        "Shift Request",
+        filters=shift_filters,
+        fields=[
+            "name",
+            "employee",
+            "employee_name",
+            "shift_type",
+            "from_date",
+            "to_date",
+            "approver",
+            "creation",
+        ],
+        order_by="creation asc",
+        limit=200,
+        ignore_permissions=True
+    )
+
+    results = []
+    for lv in leaves:
+        lv.type = "Leave"
+        results.append(lv)
+        
+    for sh in shifts:
+        sh.type = "Shift"
+        sh.leave_type = sh.shift_type  # Map shift_type to leave_type for frontend compatibility
+        sh.leave_approver = sh.approver
+        
+        # Try to fetch comment if there's any
+        comments = frappe.get_all("Communication", filters={"reference_doctype": "Shift Request", "reference_name": sh.name, "communication_type": "Comment"}, fields=["content"], limit=1)
+        if comments:
+            sh.description = comments[0].content
+        else:
+            sh.description = ""
+            
+        results.append(sh)
+
+    results.sort(key=lambda x: x.creation)
+    return results
 
 
 @frappe.whitelist()
@@ -905,10 +951,44 @@ def decide_leave_application(leave_name, action):
         doc.submit()
     elif action == "reject":
         doc.status = "Rejected"
+        doc.leave_approver = frappe.session.user
         doc.save(ignore_permissions=True)
     else:
         frappe.throw(_("Accion no valida."))
 
+    frappe.db.commit()
+    notify_shift_panel_update(doc, None)
+    return {"name": doc.name}
+
+@frappe.whitelist()
+def decide_shift_request(shift_name, action):
+    """Approve or reject a pending shift request assigned to this approver."""
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+    doc = frappe.get_doc("Shift Request", shift_name)
+    if doc.approver != frappe.session.user and not _is_privileged_approver():
+        frappe.throw(_("No eres el aprobador asignado para esta solicitud y no tienes permisos de administrador."))
+    if doc.status != "Draft" or doc.docstatus != 0:
+        frappe.throw(_("Esta solicitud ya fue procesada."))
+
+    action = (action or "").lower()
+    
+    try:
+        if action == "approve":
+            doc.status = "Approved"
+            doc.approver = frappe.session.user
+            doc.save(ignore_permissions=True)
+            doc.submit()
+        elif action == "reject":
+            doc.status = "Rejected"
+            doc.approver = frappe.session.user
+            doc.save(ignore_permissions=True)
+        else:
+            frappe.throw(_("Accion no valida."))
+    except Exception as e:
+        frappe.throw(str(e))
+    
     frappe.db.commit()
     notify_shift_panel_update(doc, None)
     return {"name": doc.name, "status": doc.status}
