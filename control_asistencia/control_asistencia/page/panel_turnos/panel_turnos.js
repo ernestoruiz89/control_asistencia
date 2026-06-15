@@ -291,6 +291,14 @@ function loadPendingLeaveApprovals() {
     });
 }
 
+function formatUserDate(value) {
+    if (!value) return '';
+    if (frappe.datetime && frappe.datetime.str_to_user) {
+        return frappe.datetime.str_to_user(value);
+    }
+    return value;
+}
+
 function updateBranchFilter() {
     const branchSelect = document.getElementById('branch-filter');
     if (!branchSelect) return;
@@ -442,7 +450,7 @@ function showLeaveApprovalsDialog() {
                     ${escapeHtml(lv.leave_type)}
                     ${lv.description ? `<br><small class="text-muted">${escapeHtml(lv.description)}</small>` : ''}
                 </td>
-                <td>${escapeHtml(lv.from_date)}<br><span class="text-muted">${__('a')} ${escapeHtml(lv.to_date)}</span></td>
+                <td>${escapeHtml(formatUserDate(lv.from_date))}<br><span class="text-muted">${__('a')} ${escapeHtml(formatUserDate(lv.to_date))}</span></td>
                 <td>${lv.type === 'Shift' ? '-' : (lv.half_day ? __('Medio dia') : __('Dia completo'))}</td>
                 <td style="white-space:nowrap;">
                     <button class="btn btn-success btn-xs btn-approve-leave" data-name="${escapeHtml(lv.name)}" data-type="${escapeHtml(lv.type || 'Leave')}">
@@ -474,7 +482,7 @@ function showLeaveApprovalsDialog() {
     };
 
     const d = new frappe.ui.Dialog({
-        title: __('Solicitudes de vacaciones pendientes'),
+        title: __('Solicitudes Pendientes'),
         size: 'extra-large',
         fields: [
             { fieldtype: 'HTML', fieldname: 'requests_html', options: renderRows() },
