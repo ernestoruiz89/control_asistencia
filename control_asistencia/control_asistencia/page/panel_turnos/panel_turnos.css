@@ -157,14 +157,20 @@
 }
 
 /* ── Fullscreen Adjustments ── */
-.shift-panel-container:fullscreen {
+.shift-panel-container.is-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1030;
     background-color: var(--bg-color, #ffffff);
     padding: 20px;
     overflow-y: auto;
 }
 
 .shift-panel-container.is-fullscreen #grid-wrapper {
-    max-height: 85vh !important;
+    max-height: calc(100vh - 120px) !important;
 }
 
 /* ── Highlight current day ── */

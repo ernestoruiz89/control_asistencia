@@ -511,6 +511,8 @@ frappe.ready(function() {
     let activeTab = 'attendance';
     let leaveTypes = [];
     let leaveApplications = [];
+    let shiftTypes = [];
+    let shiftRequests = [];
     let savingLeave = false;
     let cancellingLeave = null;
 
@@ -623,7 +625,8 @@ frappe.ready(function() {
             '</div>' +
             '<div class="am-tabs">' +
             '    <button class="am-tab ' + (activeTab === 'attendance' ? 'am-tab-active' : '') + '" id="am-tab-attendance">Asistencia</button>' +
-            '    <button class="am-tab ' + (activeTab === 'leave' ? 'am-tab-active' : '') + '" id="am-tab-leave">Solicitudes</button>' +
+            '    <button class="am-tab ' + (activeTab === 'leave' ? 'am-tab-active' : '') + '" id="am-tab-leave">Permisos</button>' +
+            '    <button class="am-tab ' + (activeTab === 'shift' ? 'am-tab-active' : '') + '" id="am-tab-shift">Turnos</button>' +
             '</div>';
 
         if (activeTab === 'attendance') {
@@ -646,7 +649,7 @@ frappe.ready(function() {
                 '        <button class="am-btn-action am-btn-out ' + (outDisabled ? 'am-btn-disabled' : '') + '" id="am-btn-out" ' + (outDisabled ? 'disabled' : '') + '>' + outStr + '</button>' +
                 '    </div>' +
                 '</div>';
-        } else {
+        } else if (activeTab === 'leave') {
             const leaveOptions = leaveTypes.map(function(t) {
                 return '<option value="' + esc(t.name) + '">' + esc(t.name) + '</option>';
             }).join('');
@@ -687,8 +690,46 @@ frappe.ready(function() {
                 '        <button class="am-submit-btn ' + (savingLeave ? 'am-btn-disabled' : '') + '" id="am-submit-leave" ' + (savingLeave ? 'disabled' : '') + '>' + (savingLeave ? 'Enviando...' : 'Enviar solicitud') + '</button>' +
                 '    </div>' +
                 '    <div class="am-list-card">' +
-                '        <h2 class="am-card-title">Mis solicitudes</h2>' +
+                '        <h2 class="am-card-title">Mis permisos</h2>' +
                          rows +
+                '    </div>' +
+                '</div>';
+        } else if (activeTab === 'shift') {
+            const shiftOptions = shiftTypes.map(function(t) {
+                return '<option value="' + esc(t.name) + '">' + esc(t.name) + '</option>';
+            }).join('');
+            
+            let shiftRows = '';
+            if (!shiftRequests.length) {
+                shiftRows = '<p class="am-info-text">No tienes solicitudes de turno registradas.</p>';
+            } else {
+                shiftRows = shiftRequests.map(function(sr) {
+                    const statusClass = 'am-status-' + String(sr.status || '').toLowerCase();
+                    return '<div class="am-leave-row">' +
+                        '<div class="am-leave-head">' +
+                        '<div>' +
+                        '<p class="am-leave-type">' + esc(sr.shift_type) + '</p>' +
+                        '<p class="am-leave-dates">' + esc(sr.from_date) + ' a ' + esc(sr.to_date) + '</p>' +
+                        '</div>' +
+                        '<span class="am-status-pill ' + statusClass + '">' + esc(leaveStatusLabel(sr.status)) + '</span>' +
+                        '</div>' +
+                        '</div>';
+                }).join('');
+            }
+
+            html +=
+                '<div class="am-content am-leave-content">' +
+                '    <div class="am-form-card">' +
+                '        <h2 class="am-card-title">Solicitar Cambio de Turno</h2>' +
+                '        <div class="am-field"><label>Turno</label><select id="am-shift-type"><option value="">-- Seleccionar --</option>' + shiftOptions + '<option value="Otro">Otro (No existe)</option></select></div>' +
+                '        <div class="am-field" id="am-shift-custom-row" style="display:none;"><label>Detalles del Turno Solicitado (Horarios y Días aplicables)</label><textarea id="am-shift-custom" placeholder="Ej: Lunes a Jueves de 8am a 4pm..."></textarea></div>' +
+                '        <div class="am-field"><label>Desde</label><input type="date" id="am-shift-from-date"></div>' +
+                '        <div class="am-field"><label>Hasta</label><input type="date" id="am-shift-to-date"></div>' +
+                '        <button class="am-submit-btn ' + (savingLeave ? 'am-btn-disabled' : '') + '" id="am-submit-shift" ' + (savingLeave ? 'disabled' : '') + '>' + (savingLeave ? 'Enviando...' : 'Enviar solicitud') + '</button>' +
+                '    </div>' +
+                '    <div class="am-list-card">' +
+                '        <h2 class="am-card-title">Mis cambios de turno</h2>' +
+                         shiftRows +
                 '    </div>' +
                 '</div>';
         }
@@ -697,6 +738,7 @@ frappe.ready(function() {
 
         $('#am-tab-attendance').on('click', function() { activeTab = 'attendance'; render(); });
         $('#am-tab-leave').on('click', function() { activeTab = 'leave'; render(); loadLeaveData(); });
+        $('#am-tab-shift').on('click', function() { activeTab = 'shift'; render(); loadShiftData(); });
         $('#am-install-app').on('click', installPWA);
         $('#am-header-logout').on('click', function() {
             window.location.href = '/?cmd=web_logout';
@@ -710,6 +752,16 @@ frappe.ready(function() {
         $('#am-btn-in').on('click', function() { handleLog('IN'); });
         $('#am-btn-out').on('click', function() { handleLog('OUT'); });
         $('#am-submit-leave').on('click', submitLeaveRequest);
+        $('#am-submit-shift').on('click', submitShiftRequest);
+        
+        $('#am-shift-type').on('change', function() {
+            if ($(this).val() === 'Otro') {
+                $('#am-shift-custom-row').show();
+            } else {
+                $('#am-shift-custom-row').hide();
+            }
+        });
+
         $('.am-cancel-btn').on('click', function() {
             cancelLeaveRequest($(this).data('leave-name'));
         });
@@ -717,6 +769,10 @@ frappe.ready(function() {
             const today = todayLocalISO();
             $('#am-from-date').val(today);
             $('#am-to-date').val(today);
+        } else if (activeTab === 'shift') {
+            const today = todayLocalISO();
+            $('#am-shift-from-date').val(today);
+            $('#am-shift-to-date').val(today);
         }
     }
 
@@ -892,6 +948,67 @@ frappe.ready(function() {
                 if (!r.exc && r.message) {
                     frappe.show_alert({ message: 'Solicitud enviada para aprobacion.', indicator: 'green' });
                     loadLeaveData();
+                } else {
+                    render();
+                }
+            },
+            error: function() {
+                savingLeave = false;
+                render();
+            }
+        });
+    }
+
+    function loadShiftData() {
+        frappe.call({
+            method: 'control_asistencia.control_asistencia.shift_panel.get_shift_types_options',
+            callback: function(r) {
+                shiftTypes = r.message || [];
+                frappe.call({
+                    method: 'control_asistencia.control_asistencia.shift_panel.get_my_shift_requests',
+                    callback: function(res) {
+                        shiftRequests = res.message || [];
+                        if (activeTab === 'shift') render();
+                    }
+                });
+            }
+        });
+    }
+
+    function submitShiftRequest() {
+        if (savingLeave) return;
+
+        const shiftType = $('#am-shift-type').val();
+        const customDetails = $('#am-shift-custom').val() || '';
+        const fromDate = $('#am-shift-from-date').val();
+        const toDate = $('#am-shift-to-date').val();
+
+        if (!shiftType || !fromDate || !toDate) {
+            frappe.msgprint({ title: 'Datos incompletos', message: 'Selecciona tipo de turno, fecha inicial y fecha final.', indicator: 'orange' });
+            return;
+        }
+        
+        if (shiftType === 'Otro' && !customDetails) {
+            frappe.msgprint({ title: 'Datos incompletos', message: 'Escribe los detalles del turno solicitado.', indicator: 'orange' });
+            return;
+        }
+
+        savingLeave = true;
+        render();
+
+        frappe.call({
+            method: 'control_asistencia.control_asistencia.shift_panel.request_mobile_shift_change',
+            args: {
+                shift_type: shiftType,
+                custom_details: customDetails,
+                from_date: fromDate,
+                to_date: toDate
+            },
+            callback: function(r) {
+                savingLeave = false;
+                if (!r.exc && r.message) {
+                    frappe.show_alert({ message: 'Solicitud enviada para aprobacion.', indicator: 'green' });
+                    loadShiftData();
                 } else {
                     render();
                 }

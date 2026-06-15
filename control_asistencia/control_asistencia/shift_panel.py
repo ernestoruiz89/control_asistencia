@@ -766,6 +766,82 @@ def cancel_mobile_leave(leave_name):
 
 
 @frappe.whitelist()
+def get_shift_types_options():
+    """Return shift types available for employee self-service."""
+    return frappe.get_all(
+        "Shift Type",
+        fields=["name"],
+        order_by="name asc",
+        limit=200,
+        ignore_permissions=True
+    )
+
+
+@frappe.whitelist()
+def get_my_shift_requests(limit=20):
+    """Return recent shift requests for the logged in employee."""
+    employee = _get_session_employee()
+    return frappe.get_all(
+        "Shift Request",
+        filters={"employee": employee.name},
+        fields=["name", "shift_type", "from_date", "to_date", "status", "docstatus"],
+        order_by="creation desc",
+        limit=limit,
+        ignore_permissions=True
+    )
+
+
+@frappe.whitelist()
+def request_mobile_shift_change(shift_type, from_date, to_date, custom_details=None):
+    """Create a new Shift Request for the employee."""
+    employee = _get_session_employee()
+    start = frappe.utils.getdate(from_date)
+    end = frappe.utils.getdate(to_date)
+
+    if end < start:
+        frappe.throw(_("La fecha 'Hasta' no puede ser anterior a la fecha 'Desde'."))
+
+    if shift_type == 'Otro':
+        # Create a generic shift type if it doesn't exist
+        generic_name = "Turno Personalizado (Ver Comentarios)"
+        if not frappe.db.exists("Shift Type", generic_name):
+            try:
+                st_doc = frappe.get_doc({
+                    "doctype": "Shift Type",
+                    "shift_type_name": generic_name,
+                    "name": generic_name,
+                    "start_time": "00:00:00",
+                    "end_time": "23:59:59"
+                })
+                st_doc.insert(ignore_permissions=True)
+            except Exception:
+                pass
+        shift_type = generic_name
+
+    doc = frappe.get_doc({
+        "doctype": "Shift Request",
+        "employee": employee.name,
+        "shift_type": shift_type,
+        "from_date": start,
+        "to_date": end,
+        "status": "Draft",
+        "docstatus": 0
+    })
+
+    doc.insert(ignore_permissions=True)
+    
+    if custom_details:
+        try:
+            doc.add_comment("Comment", custom_details)
+        except Exception:
+            pass
+
+    frappe.db.commit()
+    notify_shift_panel_update(doc, None)
+    return {"name": doc.name}
+
+
+@frappe.whitelist()
 def get_pending_leave_approvals():
     """Return pending leave applications assigned to the current leave approver."""
     if frappe.session.user == "Guest":

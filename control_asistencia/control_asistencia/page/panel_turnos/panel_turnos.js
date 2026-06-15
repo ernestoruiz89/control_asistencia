@@ -199,9 +199,8 @@ function bindEvents() {
     });
 
     document.getElementById('btn-fullscreen').addEventListener('click', () => {
-        const container = document.querySelector('.shift-panel-container');
         if (!document.fullscreenElement) {
-            container.requestFullscreen().catch(err => {
+            document.documentElement.requestFullscreen().catch(err => {
                 console.error(`Error Fullscreen: ${err.message}`);
             });
         } else {
