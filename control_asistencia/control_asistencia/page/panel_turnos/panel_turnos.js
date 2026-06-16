@@ -522,10 +522,10 @@ function showLeaveApprovalsDialog() {
 
     d.show();
     d.$wrapper.on('click', '.btn-approve-leave', function () {
-        process($(this).data('name'), 'approve');
+        process($(this).data('name'), $(this).data('type'), 'approve');
     });
     d.$wrapper.on('click', '.btn-reject-leave', function () {
-        process($(this).data('name'), 'reject');
+        process($(this).data('name'), $(this).data('type'), 'reject');
     });
 }
 
