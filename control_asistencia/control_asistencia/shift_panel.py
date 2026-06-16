@@ -386,11 +386,10 @@ def get_weekly_panel_data(start_date, days=7):
                     # Determine on-time vs late/early
                     first_in = None
                     last_out = None
-                    for ck in day_checkins:
-                        if ck["action"] == "clock-in" and first_in is None:
-                            first_in = ck["time"]
-                        if ck["action"] == "clock-out":
-                            last_out = ck["time"]
+                    if day_checkins:
+                        first_in = day_checkins[0]["time"]
+                        if len(day_checkins) > 1:
+                            last_out = day_checkins[-1]["time"]
 
                     late_in = False
                     early_out = False
