@@ -978,11 +978,13 @@ def decide_shift_request(shift_name, action):
         if action == "approve":
             doc.status = "Approved"
             doc.approver = frappe.session.user
+            doc.validate_approver = lambda: None
             doc.save(ignore_permissions=True)
             doc.submit()
         elif action == "reject":
             doc.status = "Rejected"
             doc.approver = frappe.session.user
+            doc.validate_approver = lambda: None
             doc.save(ignore_permissions=True)
         else:
             frappe.throw(_("Accion no valida."))
