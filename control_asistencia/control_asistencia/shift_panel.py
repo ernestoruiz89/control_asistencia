@@ -979,6 +979,26 @@ def decide_shift_request(shift_name, action):
     
     try:
         if action == "approve":
+            # Cancel/delete any conflicting Shift Assignment records first
+            conflicting = frappe.get_all(
+                "Shift Assignment",
+                filters={
+                    "employee": doc.employee,
+                    "docstatus": ["<", 2],
+                    "start_date": ["<=", doc.to_date],
+                },
+                fields=["name", "docstatus", "end_date"]
+            )
+            for ex in conflicting:
+                if not ex.end_date or ex.end_date >= doc.from_date:
+                    try:
+                        if ex.docstatus == 1:
+                            frappe.get_doc("Shift Assignment", ex.name).cancel()
+                        elif ex.docstatus == 0:
+                            frappe.delete_doc("Shift Assignment", ex.name)
+                    except Exception:
+                        pass
+
             doc.status = "Approved"
             doc.approver = frappe.session.user
             doc.validate_approver = lambda: None
