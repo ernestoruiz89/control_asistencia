@@ -396,12 +396,16 @@ def get_weekly_panel_data(start_date, days=7):
 
                     if first_in:
                         checkin_time = first_in if isinstance(first_in, datetime) else datetime.combine(d, first_in)
-                        if checkin_time.replace(tzinfo=None) > (shift_start_dt + timedelta(minutes=grace_in)):
+                        checkin_time_cmp = checkin_time.replace(second=0, microsecond=0, tzinfo=None)
+                        shift_start_cmp = shift_start_dt.replace(second=0, microsecond=0, tzinfo=None)
+                        if checkin_time_cmp > (shift_start_cmp + timedelta(minutes=grace_in)):
                             late_in = True
 
                     if last_out:
                         checkout_time = last_out if isinstance(last_out, datetime) else datetime.combine(d, last_out)
-                        if checkout_time.replace(tzinfo=None) < (shift_end_dt - timedelta(minutes=grace_out)):
+                        checkout_time_cmp = checkout_time.replace(second=0, microsecond=0, tzinfo=None)
+                        shift_end_cmp = shift_end_dt.replace(second=0, microsecond=0, tzinfo=None)
+                        if checkout_time_cmp < (shift_end_cmp - timedelta(minutes=grace_out)):
                             early_out = True
 
                     if late_in or early_out:
@@ -1394,13 +1398,17 @@ def _get_attendance_data(employee, date_obj, shift_name=None):
     if st and st.start_time and first_in:
         grace = int(st.late_entry_grace_period or 0)
         shift_start_dt = datetime.combine(date_obj, (datetime.min + st.start_time).time())
-        if first_in.replace(tzinfo=None) > (shift_start_dt + timedelta(minutes=grace)):
+        first_in_cmp = first_in.replace(second=0, microsecond=0, tzinfo=None)
+        shift_start_cmp = shift_start_dt.replace(second=0, microsecond=0, tzinfo=None)
+        if first_in_cmp > (shift_start_cmp + timedelta(minutes=grace)):
             late_entry = 1
 
     if st and st.end_time and last_out:
         grace = int(st.early_exit_grace_period or 0)
         shift_end_dt = datetime.combine(date_obj, (datetime.min + st.end_time).time())
-        if last_out.replace(tzinfo=None) < (shift_end_dt - timedelta(minutes=grace)):
+        last_out_cmp = last_out.replace(second=0, microsecond=0, tzinfo=None)
+        shift_end_cmp = shift_end_dt.replace(second=0, microsecond=0, tzinfo=None)
+        if last_out_cmp < (shift_end_cmp - timedelta(minutes=grace)):
             early_exit = 1
 
     return {
